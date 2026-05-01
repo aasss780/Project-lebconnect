@@ -1,0 +1,130 @@
+.csb-sidebar {
+  width: 260px;
+  background: #ffffff;
+  min-height: calc(100vh - 96px);
+  max-height: calc(100vh - 96px);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 84px;
+  overflow: hidden;
+}
+
+.csb-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.csb-profile h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  color: #111827;
+}
+
+.csb-profile p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.csb-sidebar-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.csb-links-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 16px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.csb-sidebar-footer {
+  flex-shrink: 0;
+  padding: 10px 16px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.csb-link-support.csb-link {
+  border: 1px solid #bfdbfe;
+  background: #f8fafc;
+  color: #0a66c2;
+}
+
+.csb-link-support.csb-link:hover:not(:disabled) {
+  background: #eaf3ff;
+}
+
+.csb-link-signout.csb-link {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.csb-link {
+  width: 100%;
+  height: 46px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+}
+
+.csb-link-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 16px;
+  color: #64748b;
+}
+
+.csb-link-active {
+  background: #eaf3ff;
+  color: #0a66c2;
+}
+
+.csb-link-active .csb-link-icon {
+  color: #0a66c2;
+}
+
+.csb-badge {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0b73db;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 1150px) {
+  .csb-sidebar {
+    display: none;
+  }
+}
+

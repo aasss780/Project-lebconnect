@@ -1,0 +1,22 @@
+/* Company registration — compact for 1366×768; scroll confined to form column */
+
+.company-register-page .register-right {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.company-register-page .register-form-wrapper {
+  max-height: min(696px, 100%);
+}
+
+@media (min-width: 993px) and (max-height: 780px) {
+  .company-register-page .register-left-content .features-list .feature-item:nth-child(2) {
+    display: none;
+  }
+}
+
+@media (min-width: 993px) and (max-height: 700px) {
+  .company-register-page .bottom-joined {
+    display: none;
+  }
+}

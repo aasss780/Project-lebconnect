@@ -1,0 +1,142 @@
+/* Specialization / Industry — matches register & modal form controls */
+
+.category-picker-field {
+  width: 100%;
+}
+
+.category-picker-field > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0b1324;
+  margin-top: 2px;
+  margin-bottom: 6px;
+}
+
+.lc-category-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.lc-category-select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #64748b;
+  pointer-events: none;
+}
+
+.lc-category-select {
+  display: block;
+  width: 100%;
+  height: 52px;
+  padding: 0 40px 0 16px;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.2;
+  color: #0b1324;
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.lc-category-select:hover {
+  border-color: #c5d3e3;
+}
+
+.lc-category-select:focus {
+  border-color: #0a66c2;
+  box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.12);
+}
+
+.lc-category-select:invalid,
+.lc-category-select.lc-category-select--placeholder {
+  color: #64748b;
+}
+
+.lc-category-select option {
+  color: #0b1324;
+  background: #ffffff;
+}
+
+.lc-category-select option[value=""] {
+  color: #64748b;
+}
+
+.lc-category-text {
+  display: block;
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.2;
+  color: #0b1324;
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  outline: none;
+}
+
+.lc-category-text::placeholder {
+  color: #64748b;
+}
+
+.lc-category-text:hover {
+  border-color: #c5d3e3;
+}
+
+.lc-category-text:focus {
+  border-color: #0a66c2;
+  box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.12);
+}
+
+.category-picker-other {
+  margin-top: 14px;
+}
+
+.category-picker-other > label {
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+.lc-category-select.lc-input-has-error,
+.lc-category-text.lc-input-has-error {
+  box-shadow: none;
+}
+
+.lc-category-select.lc-input-has-error:focus,
+.lc-category-text.lc-input-has-error:focus {
+  box-shadow: none;
+}
+
+.category-picker-field .lc-inline-error {
+  margin-top: 6px;
+}
+
+/* Company profile modal (co-job-modal-form) — match .co-modal-label */
+.co-job-modal-form .category-picker-field > label {
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Candidate edit modal — match .edit-profile-modal label weight/color */
+.edit-profile-modal .category-picker-field > label {
+  font-weight: 600;
+  color: #334155;
+}
