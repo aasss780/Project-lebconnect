@@ -3,9 +3,20 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/axios";
 import AppTopbar from "../components/AppTopbar";
 import AppSidebar from "../components/AppSidebar";
+import Modal from "../components/Modal";
 import UserAvatar from "../components/UserAvatar";
+import { Loader2 } from "lucide-react";
 import { formatRelativeTime } from "../utils/format";
-import { getUser } from "../utils/auth";
+import { getUser, logout } from "../utils/auth";
+import {
+  ADMIN_MESSAGES_PATH,
+  ADMIN_NOTIFICATIONS_PATH,
+  adminDashboardPathForTab,
+} from "../utils/adminNav";
+import { motion } from "framer-motion";
+import { lcMotionPage } from "../utils/motionProps";
+import "./Dashboard.css";
+import "./CandidateDashboard.css";
 import "./AdminDashboard.css";
 
 function requirementsText(job) {
@@ -36,6 +47,7 @@ export default function AdminJobDetailPage() {
   const [notifUnread, setNotifUnread] = useState(0);
   const [messagesUnread, setMessagesUnread] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const loadUnread = useCallback(async () => {
     try {
@@ -87,11 +99,7 @@ export default function AdminJobDetailPage() {
   }, [loadUnread, loadMsgUnread]);
 
   const signOut = () => {
-    try {
-      localStorage.clear();
-    } catch {
-      /* ignore */
-    }
+    logout();
     navigate("/login", { replace: true });
   };
 
@@ -101,13 +109,13 @@ export default function AdminJobDetailPage() {
   const companyName = company?.companyName || "Company";
   const st = String(job?.status || "active").toLowerCase();
 
-  const handleDelete = async () => {
+  const handleDeleteConfirmed = async () => {
     if (!Number.isFinite(jid)) return;
-    if (!window.confirm("Delete this job listing?")) return;
     setBusy(true);
     try {
       await api.delete(`/api/admin/jobs/${jid}`);
-      navigate("/admin-dashboard?tab=jobs", { replace: true });
+      setConfirmDelete(false);
+      navigate(adminDashboardPathForTab("jobs"), { replace: true });
     } catch (e) {
       alert(e.response?.data?.message || "Could not delete job");
     } finally {
@@ -118,7 +126,6 @@ export default function AdminJobDetailPage() {
   const handleClose = async () => {
     if (!Number.isFinite(jid)) return;
     if (st === "closed") return;
-    if (!window.confirm("Close this job? It will no longer accept applicants.")) return;
     setBusy(true);
     try {
       await api.put(`/api/admin/jobs/${jid}/close`);
@@ -136,7 +143,7 @@ export default function AdminJobDetailPage() {
   };
 
   return (
-    <div className="candidate-page admin-app-page">
+    <motion.div className="candidate-page admin-app-page" {...lcMotionPage()}>
       <AppTopbar
         user={me}
         subtitle="Administrator"
@@ -149,31 +156,33 @@ export default function AdminJobDetailPage() {
         showMessaging
         onLogoClick={goDash}
         onHomeClick={goDash}
-        onMessagesClick={() => navigate("/admin/messages")}
-        onNotificationsClick={() => navigate("/notifications")}
+        onMessagesClick={() => navigate(ADMIN_MESSAGES_PATH)}
+        onNotificationsClick={() => navigate(ADMIN_NOTIFICATIONS_PATH)}
       />
 
-      <div className="layout">
+      <div className="dashboard-body">
         <AppSidebar
           user={me}
           activeSection="jobs"
           notifUnread={notifUnread}
+          messagesUnread={messagesUnread}
           onDashboard={goDash}
-          onUsers={() => navigate("/admin-dashboard?tab=users")}
-          onJobs={() => navigate("/admin-dashboard?tab=jobs")}
-          onComplaints={() => navigate("/admin-dashboard?tab=complaints")}
-          onMessages={() => navigate("/admin/messages")}
-          onNotifications={() => navigate("/notifications")}
+          onUsers={() => navigate(adminDashboardPathForTab("users"))}
+          onJobs={() => navigate(adminDashboardPathForTab("jobs"))}
+          onComplaints={() => navigate(adminDashboardPathForTab("complaints"))}
+          onModeration={() => navigate(adminDashboardPathForTab("moderation"))}
+          onMessages={() => navigate(ADMIN_MESSAGES_PATH)}
+          onNotifications={() => navigate(ADMIN_NOTIFICATIONS_PATH)}
           onSignOut={signOut}
         />
 
-        <main className="main-content adm-main adm-job-detail">
+        <main className="main-content adm-main adm-job-detail lc-adm-main">
           <div className="adm-stack">
             <div className="adm-page-head adm-user-detail-head">
               <button
                 type="button"
                 className="adm-btn adm-btn--ghost adm-btn--sm"
-                onClick={() => navigate("/admin-dashboard?tab=jobs")}
+                onClick={() => navigate(adminDashboardPathForTab("jobs"))}
               >
                 ← Back to job posts
               </button>
@@ -239,7 +248,12 @@ export default function AdminJobDetailPage() {
                   >
                     Close job
                   </button>
-                  <button type="button" className="adm-btn adm-btn--danger" disabled={busy} onClick={handleDelete}>
+                  <button
+                    type="button"
+                    className="adm-btn adm-btn--danger"
+                    disabled={busy}
+                    onClick={() => setConfirmDelete(true)}
+                  >
                     Delete job
                   </button>
                 </div>
@@ -248,6 +262,20 @@ export default function AdminJobDetailPage() {
           </div>
         </main>
       </div>
-    </div>
+
+      <Modal open={confirmDelete} title="Delete this job?" onClose={() => !busy && setConfirmDelete(false)}>
+        <div className="adm-delete-modal">
+          <p>This permanently removes the listing and may affect applicants.</p>
+          <div className="adm-modal-footer-actions">
+            <button type="button" className="adm-btn adm-btn--ghost" disabled={busy} onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </button>
+            <button type="button" className="adm-btn adm-btn--danger" disabled={busy} onClick={() => void handleDeleteConfirmed()}>
+              {busy ? <Loader2 className="adm-spin" size={18} strokeWidth={2.5} aria-hidden /> : "Delete"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </motion.div>
   );
 }

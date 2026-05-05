@@ -1,4 +1,5 @@
 const { query } = require("../config/db");
+const { createNotification } = require("../utils/notificationHelper");
 const { USER_PUBLIC_COLUMNS } = require("../constants/userColumns");
 const { mapUser, mapJobJoined } = require("../utils/mappers");
 const { hydratePosts } = require("./postController");
@@ -34,27 +35,42 @@ const JOB_JOIN = `
          u.company_name,
          u.industry AS company_industry,
          u.location AS company_location,
-         u.logo AS company_logo
+         u.logo AS company_logo,
+         u.is_verified AS company_is_verified
   FROM jobs j
   JOIN users u ON u.id = j.company_id
 `;
 
 async function getStats(req, res) {
   try {
+    const allUsers = await query(`SELECT COUNT(*) AS c FROM users`);
     const c1 = await query(`SELECT COUNT(*) AS c FROM users WHERE role = 'candidate'`);
     const c2 = await query(`SELECT COUNT(*) AS c FROM users WHERE role = 'company'`);
+    const ad = await query(`SELECT COUNT(*) AS c FROM users WHERE role = 'admin'`);
     const j = await query(`SELECT COUNT(*) AS c FROM jobs`);
     const ja = await query(`SELECT COUNT(*) AS c FROM jobs WHERE status = 'active'`);
     const app = await query(`SELECT COUNT(*) AS c FROM applications`);
     const co = await query(`SELECT COUNT(*) AS c FROM complaints WHERE status = 'open'`);
+    const coAll = await query(`SELECT COUNT(*) AS c FROM complaints`);
+    let postsCount = 0;
+    try {
+      const pc = await query(`SELECT COUNT(*) AS c FROM posts`);
+      postsCount = Number(pc[0]?.c || 0);
+    } catch {
+      postsCount = 0;
+    }
 
     res.json({
+      totalUsers: Number(allUsers[0].c),
       candidates: Number(c1[0].c),
       companies: Number(c2[0].c),
+      admins: Number(ad[0].c),
       jobs: Number(j[0].c),
       activeJobs: Number(ja[0].c),
       applications: Number(app[0].c),
       complaintsOpen: Number(co[0].c),
+      complaintsTotal: Number(coAll[0].c),
+      posts: postsCount,
     });
   } catch (err) {
     console.error(err);
@@ -285,6 +301,227 @@ async function updateAdminComplaintStatus(req, res) {
   }
 }
 
+async function verifyUser(req, res) {
+  try {
+    const uid = Number(req.params.id);
+    const rows = await query(`SELECT id, role, company_name, full_name FROM users WHERE id = ?`, [
+      uid,
+    ]);
+    if (!rows[0]) return res.status(404).json({ message: "User not found" });
+    await query(`UPDATE users SET is_verified = 1 WHERE id = ?`, [uid]);
+    try {
+      await createNotification(uid, {
+        title: "Account verified",
+        message: "Your LebConnect profile now shows a verified badge.",
+        type: "verification",
+      });
+    } catch {
+      await createNotification(uid, {
+        title: "Account verified",
+        message: "Your LebConnect profile now shows a verified badge.",
+        type: "system",
+      });
+    }
+    res.json({ message: "User verified", id: uid });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to verify user", error: err.message });
+  }
+}
+
+async function unverifyUser(req, res) {
+  try {
+    const uid = Number(req.params.id);
+    const result = await query(`UPDATE users SET is_verified = 0 WHERE id = ?`, [uid]);
+    if (!result.affectedRows) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "Verification removed", id: uid });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to unverify", error: err.message });
+  }
+}
+
+const REPORT_JOIN = `
+  SELECT r.*,
+         u.full_name AS rep_full_name,
+         u.company_name AS rep_company_name,
+         u.email AS rep_email,
+         u.role AS rep_role
+  FROM reports r
+  JOIN users u ON u.id = r.reporter_id
+`;
+
+function mapReport(row) {
+  return {
+    id: row.id,
+    targetType: row.target_type,
+    targetId: row.target_id,
+    reason: row.reason,
+    status: row.status,
+    createdAt: row.created_at,
+    reporter: {
+      fullName: row.rep_full_name,
+      companyName: row.rep_company_name,
+      email: row.rep_email,
+      role: row.rep_role,
+    },
+  };
+}
+
+async function listReports(req, res) {
+  try {
+    const rows = await query(`${REPORT_JOIN} ORDER BY r.created_at DESC`);
+    res.json(rows.map(mapReport));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to list reports", error: err.message });
+  }
+}
+
+async function updateReportStatus(req, res) {
+  try {
+    const status = String(req.body.status || "");
+    if (!["open", "reviewing", "resolved"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+    const rid = Number(req.params.id);
+    const result = await query(`UPDATE reports SET status = ? WHERE id = ?`, [status, rid]);
+    if (!result.affectedRows) return res.status(404).json({ message: "Not found" });
+    const rows = await query(`${REPORT_JOIN} WHERE r.id = ?`, [rid]);
+    const r = rows[0];
+    if (status === "resolved" && r) {
+      try {
+        await createNotification(r.reporter_id, {
+          title: "Report resolved",
+          message: "Moderators reviewed your report — thank you for helping keep LebConnect safe.",
+          type: "report",
+        });
+      } catch {
+        await createNotification(r.reporter_id, {
+          title: "Report resolved",
+          message: "Moderators reviewed your report.",
+          type: "system",
+        });
+      }
+    }
+    res.json({ report: mapReport(rows[0]) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update report", error: err.message });
+  }
+}
+
+const COMPANY_REVIEW_JOIN = `
+  SELECT r.*,
+         c.company_name,
+         u.full_name AS author_name,
+         u.email AS author_email
+  FROM company_reviews r
+  JOIN users c ON c.id = r.company_id
+  JOIN users u ON u.id = r.user_id
+`;
+
+async function listCompanyReviewsAdmin(req, res) {
+  try {
+    const rows = await query(`${COMPANY_REVIEW_JOIN} ORDER BY r.created_at DESC`);
+    res.json(
+      rows.map((row) => ({
+        id: row.id,
+        companyId: row.company_id,
+        companyName: row.company_name,
+        userId: row.user_id,
+        authorName: row.author_name,
+        authorEmail: row.author_email,
+        rating: row.rating,
+        title: row.title,
+        comment: row.comment,
+        interviewExperience: row.interview_experience,
+        status: row.status,
+        createdAt: row.created_at,
+      }))
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to list company reviews", error: err.message });
+  }
+}
+
+async function updateCompanyReviewStatus(req, res) {
+  try {
+    const status = String(req.body.status || "").toLowerCase();
+    if (!["pending", "approved", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+    const id = Number(req.params.id);
+    const result = await query(`UPDATE company_reviews SET status = ? WHERE id = ?`, [status, id]);
+    if (!result.affectedRows) return res.status(404).json({ message: "Not found" });
+    const rows = await query(
+      `${COMPANY_REVIEW_JOIN} WHERE r.id = ?`,
+      [id]
+    );
+    const row = rows[0];
+    if (row && (status === "approved" || status === "rejected")) {
+      const msg =
+        status === "approved"
+          ? `Your review of ${row.company_name} was approved and is live.`
+          : `Your review of ${row.company_name} did not meet guidelines.`;
+      try {
+        await createNotification(row.user_id, {
+          title: status === "approved" ? "Review published" : "Review rejected",
+          message: msg,
+          type: "system",
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update review", error: err.message });
+  }
+}
+
+async function listSiteReviewsAdmin(_req, res) {
+  try {
+    const rows = await query(
+      `SELECT id, user_id, name, rating, comment, created_at
+       FROM site_reviews
+       ORDER BY created_at DESC`
+    );
+    res.json(
+      rows.map((row) => ({
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        rating: Number(row.rating),
+        comment: row.comment,
+        createdAt: row.created_at,
+      }))
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to list site reviews", error: err.message });
+  }
+}
+
+async function deleteSiteReviewAdmin(req, res) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid review id" });
+    }
+    const result = await query(`DELETE FROM site_reviews WHERE id = ?`, [id]);
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Site review not found" });
+    }
+    res.json({ message: "Site review deleted", id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete site review", error: err.message });
+  }
+}
+
 module.exports = {
   getStats,
   listUsers,
@@ -296,4 +533,12 @@ module.exports = {
   deleteJob,
   listAdminComplaints,
   updateAdminComplaintStatus,
+  verifyUser,
+  unverifyUser,
+  listReports,
+  updateReportStatus,
+  listCompanyReviewsAdmin,
+  updateCompanyReviewStatus,
+  listSiteReviewsAdmin,
+  deleteSiteReviewAdmin,
 };

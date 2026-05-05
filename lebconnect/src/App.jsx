@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
+import { ToastProvider } from "./context/ToastContext";
 
 import Home from "./pages/Home";
 import ChooseRole from "./pages/ChooseRole";
@@ -17,8 +19,12 @@ import CandidateProfilePage from "./pages/CandidateProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import MessagesPage from "./pages/MessagesPage";
 
+import "./global-polish.css";
+import "./dark-mode-fixes.css";
+
 function App() {
   return (
+    <ToastProvider>
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
@@ -29,10 +35,22 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         <Route
+          path="/feed"
+          element={
+            <ProtectedRoute roles={["candidate", "company"]}>
+              <RouteErrorBoundary>
+                <Dashboard />
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
-              <Dashboard />
+            <ProtectedRoute roles={["candidate", "company"]}>
+              <RouteErrorBoundary>
+                <Dashboard />
+              </RouteErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -101,12 +119,31 @@ function App() {
           }
         />
 
-        <Route path="/company-profile/:id" element={<ProfilePage />} />
-        <Route path="/candidate-profile/:id" element={<CandidateProfilePage />} />
+        <Route
+          path="/company-profile/:id"
+          element={
+            <ProtectedRoute>
+              <RouteErrorBoundary title="My Profile could not load">
+                <ProfilePage />
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/candidate-profile/:id"
+          element={
+            <ProtectedRoute>
+              <RouteErrorBoundary title="My Profile could not load">
+                <CandidateProfilePage />
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
+    </ToastProvider>
   );
 }
 

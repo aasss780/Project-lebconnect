@@ -1,0 +1,1120 @@
+/**
+ * Dark theme polish — scoped to html.theme-dark only.
+ * Loaded after route CSS so overrides win. No layout/logic changes.
+ */
+
+/* ── Topbar ─────────────────────────────────────────────── */
+html.theme-dark .topbar,
+html.theme-dark .notifications-topbar {
+  backdrop-filter: blur(18px) saturate(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+}
+
+html.theme-dark .top-search {
+  border-color: var(--border);
+  background: var(--lc-top-search-bg);
+}
+
+html.theme-dark .top-search input {
+  color: var(--input-text);
+  -webkit-text-fill-color: var(--input-text);
+}
+
+html.theme-dark .top-search input::placeholder {
+  color: var(--input-placeholder);
+}
+
+html.theme-dark input,
+html.theme-dark textarea,
+html.theme-dark select {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--border);
+}
+
+html.theme-dark input::placeholder,
+html.theme-dark textarea::placeholder {
+  color: var(--input-placeholder);
+}
+
+html.theme-dark select option {
+  background: var(--card);
+  color: var(--text);
+}
+
+/* ── Candidate sidebar (premium shell) ───────────────────── */
+html.theme-dark .csb-sidebar {
+  background: linear-gradient(180deg, #0f1b2e, #0b1628);
+  border-color: var(--border);
+  box-shadow: var(--lc-shadow-sm);
+}
+
+html.theme-dark .csb-sidebar-footer {
+  background: transparent;
+}
+
+html.theme-dark .csb-profile {
+  border-color: var(--border);
+}
+
+html.theme-dark .csb-link {
+  color: var(--muted);
+}
+
+html.theme-dark .csb-link-icon {
+  color: var(--muted);
+}
+
+html.theme-dark .csb-link:hover:not(.csb-link-active):not(:disabled) {
+  background: rgba(59, 130, 246, 0.14);
+  color: var(--text);
+  box-shadow: none;
+}
+
+html.theme-dark .csb-link-active {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.35),
+    rgba(37, 99, 235, 0.18)
+  );
+  color: #ffffff;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  box-shadow:
+    0 4px 22px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(96, 165, 250, 0.25);
+}
+
+html.theme-dark .csb-link-active .csb-link-icon {
+  color: var(--primary-mid);
+}
+
+html.theme-dark .csb-link-support.csb-link {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .csb-link-signout.csb-link {
+  color: var(--muted);
+}
+
+/* ── Feed / Dashboard left sidebar (legacy .left-sidebar) ─── */
+html.theme-dark .dashboard-body .left-sidebar {
+  background: linear-gradient(180deg, #0f1b2e, #0b1628);
+  border-color: var(--border);
+}
+
+html.theme-dark .dashboard-body .sidebar-profile {
+  border-color: var(--border);
+}
+
+html.theme-dark .dashboard-body .sidebar-profile h3 {
+  color: var(--text);
+}
+
+html.theme-dark .dashboard-body .sidebar-profile p {
+  color: var(--muted);
+}
+
+html.theme-dark .dashboard-body .menu-item {
+  color: var(--muted);
+}
+
+html.theme-dark .dashboard-body .menu-item span {
+  color: var(--muted);
+}
+
+html.theme-dark .dashboard-body .menu-item.active {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.35),
+    rgba(37, 99, 235, 0.18)
+  );
+  color: #ffffff;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+}
+
+html.theme-dark .dashboard-body .menu-item.active span,
+html.theme-dark .dashboard-body .menu-item.active p {
+  color: #ffffff;
+}
+
+html.theme-dark .dashboard-body .signout {
+  color: var(--muted);
+}
+
+html.theme-dark .dashboard-body .menu-badge {
+  background: var(--primary);
+  color: var(--lc-on-primary);
+}
+
+/* ── Feed stack & filter bar ───────────────────────────────── */
+html.theme-dark .feed-center-stack {
+  background: linear-gradient(
+    165deg,
+    rgba(59, 130, 246, 0.06) 0%,
+    rgba(17, 28, 46, 0.35) 40%,
+    transparent 72%
+  );
+}
+
+html.theme-dark .feed-filter-bar {
+  background: linear-gradient(170deg, rgba(30, 58, 138, 0.35) 0%, var(--card) 62%);
+  border-color: var(--border);
+}
+
+html.theme-dark .feed-notice {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(30, 58, 138, 0.35);
+  color: var(--text);
+}
+
+html.theme-dark .feed-notice--ok {
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(6, 78, 59, 0.45);
+  color: #bbf7d0;
+}
+
+html.theme-dark .filter-pill:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+html.theme-dark .post-count {
+  color: var(--muted);
+}
+
+/* ── Composer & post cards ────────────────────────────────── */
+html.theme-dark .composer-card,
+html.theme-dark .post-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--lc-shadow-sm);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.theme-dark .composer-card:hover,
+html.theme-dark .post-card:hover {
+  box-shadow: var(--lc-shadow-md);
+}
+
+html.theme-dark .composer-top textarea {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+html.theme-dark .composer-top textarea::placeholder {
+  color: var(--muted);
+}
+
+html.theme-dark .composer-top textarea:focus {
+  border-color: var(--primary-mid);
+  box-shadow: 0 0 0 3px var(--primary-ring);
+}
+
+html.theme-dark .composer-top input {
+  background: var(--input-bg);
+  color: var(--input-text);
+}
+
+html.theme-dark .composer-top input:focus {
+  background: var(--surface-2);
+}
+
+html.theme-dark .composer-top input::placeholder {
+  color: var(--input-placeholder);
+}
+
+html.theme-dark .composer-mode-toggle button {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+html.theme-dark .composer-mode-toggle button.active {
+  border-color: rgba(96, 165, 250, 0.55);
+  background: linear-gradient(
+    180deg,
+    rgba(59, 130, 246, 0.22) 0%,
+    rgba(17, 28, 46, 0.95) 100%
+  );
+  color: var(--primary-mid);
+}
+
+html.theme-dark .composer-mode-toggle button:hover:not(.active) {
+  border-color: var(--border-strong);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+html.theme-dark .composer-emoji-row {
+  border-bottom-color: var(--border);
+}
+
+html.theme-dark .composer-emoji-hit {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: transparent;
+}
+
+html.theme-dark .composer-photo-btn {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+html.theme-dark .composer-job-card {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+html.theme-dark .composer-job-card-title {
+  color: var(--text);
+}
+
+html.theme-dark .composer-job-field-input,
+html.theme-dark .composer-job-field-textarea {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--input-text);
+}
+
+html.theme-dark .composer-url-input {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--input-text);
+}
+
+html.theme-dark .composer-url-details {
+  color: var(--muted);
+}
+
+html.theme-dark .composer-actions button:not([type="submit"]) {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+html.theme-dark .post-follow-btn {
+  background: var(--surface-2);
+  border-color: var(--primary-mid);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .post-follow-btn--on {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+html.theme-dark .post-follow-btn:hover {
+  background: rgba(59, 130, 246, 0.18);
+}
+
+html.theme-dark .post-person-chip {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+html.theme-dark .post-company-chip {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .company-chip {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .post-subtitle,
+html.theme-dark .post-role-line {
+  color: var(--muted);
+}
+
+html.theme-dark .post-time {
+  color: var(--muted);
+}
+
+html.theme-dark .post-more {
+  color: var(--muted);
+}
+
+html.theme-dark .post-text p {
+  color: var(--text);
+}
+
+html.theme-dark .post-image,
+html.theme-dark .post-image--feed {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+html.theme-dark .feed-job-snippet-card {
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--card) 100%);
+  border-color: var(--border);
+}
+
+html.theme-dark .feed-job-snippet-title {
+  color: var(--text);
+}
+
+html.theme-dark .feed-job-snippet-company {
+  color: var(--muted);
+}
+
+/* ── Feed post actions, composer emoji, comments, send modal ─ */
+html.theme-dark .post-actions {
+  border-top-color: var(--border);
+}
+
+html.theme-dark .post-actions button {
+  border: 1px solid transparent;
+}
+
+html.theme-dark .post-actions button:hover,
+html.theme-dark .post-actions button:focus-visible {
+  background: var(--lc-feed-action-hover-bg);
+  color: var(--lc-feed-action-hover-fg);
+  border-color: var(--lc-feed-action-hover-border);
+  box-shadow:
+    0 4px 18px rgba(37, 99, 235, 0.14),
+    0 0 0 1px rgba(37, 99, 235, 0.08) inset;
+}
+
+html.theme-dark .top-nav:hover,
+html.theme-dark .top-nav-item:hover,
+html.theme-dark .notif-top-nav-item:hover {
+  background: rgba(59, 130, 246, 0.14);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .post-actions button:active {
+  background: rgba(37, 99, 235, 0.22);
+}
+
+html.theme-dark .post-actions button:hover .lc-post-act-icon,
+html.theme-dark .post-actions button:focus-visible .lc-post-act-icon {
+  color: var(--primary-mid);
+  opacity: 1;
+}
+
+html.theme-dark .composer-emoji-hit:hover {
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(96, 165, 250, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.15);
+}
+
+html.theme-dark .lc-comment-mini-actions button:hover {
+  color: var(--primary-mid);
+}
+
+html.theme-dark .lc-comment-mini-actions button:focus-visible {
+  outline: none;
+  color: var(--lc-feed-action-hover-fg);
+  box-shadow: 0 0 0 2px var(--primary-ring);
+  border-radius: 8px;
+}
+
+html.theme-dark .lc-reply-thread {
+  border-left-color: var(--border);
+}
+
+html.theme-dark .lc-comment-composer textarea {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--input-text);
+}
+
+html.theme-dark .lc-comment-composer textarea:focus {
+  border-color: var(--primary-mid);
+  box-shadow: 0 0 0 3px var(--primary-ring);
+}
+
+html.theme-dark .lc-comment-send {
+  border-color: var(--primary);
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: var(--lc-on-primary);
+}
+
+html.theme-dark .lc-comment-send:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+html.theme-dark .lc-reply-mini input {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--input-text);
+}
+
+html.theme-dark .lc-reply-mini button {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+html.theme-dark .lc-reply-mini button:hover {
+  background: var(--lc-feed-action-hover-bg);
+  border-color: var(--lc-feed-action-hover-border);
+  color: var(--lc-feed-action-hover-fg);
+}
+
+html.theme-dark .feed-job-action-btn.ghost:hover {
+  background: var(--lc-feed-action-hover-bg);
+  border-color: var(--lc-feed-action-hover-border);
+  color: var(--lc-feed-action-hover-fg);
+}
+
+html.theme-dark .feed-job-action-btn:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.28);
+}
+
+html.theme-dark .feed-send-modal {
+  background: linear-gradient(165deg, var(--card) 0%, rgba(23, 36, 58, 0.98) 100%);
+  border-color: var(--border);
+  box-shadow: var(--lc-shadow-lg), inset 0 1px 0 rgba(96, 165, 250, 0.08);
+}
+
+html.theme-dark .feed-send-modal-dismiss:hover {
+  background: var(--lc-feed-action-hover-bg);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .feed-send-recipient-chip {
+  background: rgba(30, 58, 138, 0.35);
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
+html.theme-dark .feed-send-hint {
+  color: var(--muted);
+}
+
+html.theme-dark .composer-submit-btn:hover:not(:disabled),
+html.theme-dark .composer-job-submit-btn:hover:not(:disabled) {
+  box-shadow:
+    0 8px 26px rgba(37, 99, 235, 0.38),
+    inset 0 1px 0 rgba(147, 197, 253, 0.12);
+}
+
+/* ── Candidate / company dashboard chrome ────────────────── */
+html.theme-dark .subtabs {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, var(--card) 52%);
+  border-color: var(--border);
+}
+
+html.theme-dark .subtab {
+  color: var(--text-secondary);
+}
+
+html.theme-dark .subtab:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .subtab.active {
+  color: var(--lc-on-primary);
+}
+
+html.theme-dark .candidate-page .primary-btn:not(.welcome-card .primary-btn) {
+  background: var(--surface-2);
+  color: var(--primary-mid);
+  border: 1px solid var(--border);
+}
+
+html.theme-dark .inner-search:not(:focus-within) {
+  background: var(--input-bg);
+}
+
+html.theme-dark .inner-search input {
+  color: var(--input-text);
+  -webkit-text-fill-color: var(--input-text);
+}
+
+html.theme-dark .inner-search input::placeholder {
+  color: var(--input-placeholder);
+}
+
+html.theme-dark .lc-filters-bar {
+  border-color: var(--border);
+  background: linear-gradient(
+    165deg,
+    rgba(59, 130, 246, 0.08) 0%,
+    var(--card) 42%,
+    var(--card) 100%
+  );
+  box-shadow: var(--lc-shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html.theme-dark .lc-filter-search:not(:focus-within) {
+  background: var(--input-bg);
+  border-color: var(--border);
+}
+
+html.theme-dark .filters-bar select {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--input-text);
+}
+
+html.theme-dark .lc-saved-search-board {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.1), var(--card));
+  border-color: var(--border);
+}
+
+html.theme-dark .lc-saved-search-card-hit {
+  color: inherit;
+}
+
+html.theme-dark .lc-saved-search-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), var(--card-soft));
+  border-color: var(--border);
+}
+
+html.theme-dark .lc-quick-hit {
+  background: var(--surface-2) !important;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+html.theme-dark .lc-quick-hit:hover {
+  background: rgba(59, 130, 246, 0.14) !important;
+}
+
+html.theme-dark .panel-card:not(.welcome-card):not(.lc-panel-card),
+html.theme-dark .mini-stat-card,
+html.theme-dark .summary-card {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html.theme-dark .mini-stat-card p,
+html.theme-dark .summary-card p {
+  color: var(--muted);
+}
+
+html.theme-dark .results-count {
+  color: var(--muted);
+}
+
+html.theme-dark .lc-saved-search-board-title {
+  color: var(--text);
+}
+
+html.theme-dark .lc-saved-search-card-name {
+  color: var(--text);
+}
+
+html.theme-dark .lc-saved-search-card-sub {
+  color: var(--muted);
+}
+
+html.theme-dark .lc-saved-search-empty {
+  color: var(--muted);
+}
+
+html.theme-dark .lc-save-search-modal-lead,
+html.theme-dark .lc-save-search-modal-note {
+  color: var(--muted);
+}
+
+html.theme-dark .lc-save-search-modal-label,
+html.theme-dark .lc-save-search-modal-check {
+  color: var(--text-secondary);
+}
+
+html.theme-dark .lc-save-search-modal-input {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--input-text);
+}
+
+html.theme-dark .lc-save-search-modal-input::placeholder {
+  color: var(--input-placeholder);
+}
+
+html.theme-dark .recent-app-item p,
+html.theme-dark .simple-job-row p,
+html.theme-dark .candidate-page .find-job-info p.company-line {
+  color: var(--muted);
+}
+
+html.theme-dark .find-job-card {
+  border-color: var(--border);
+}
+
+html.theme-dark .application-card,
+html.theme-dark .saved-job-card {
+  border-color: var(--border);
+}
+
+html.theme-dark .lc-people-field-card {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+html.theme-dark .lc-empty-state:not(.welcome-card *) {
+  border-color: var(--border-soft);
+  color: var(--muted);
+}
+
+html.theme-dark .lc-empty-state strong {
+  color: var(--text);
+}
+
+/* Company dashboard extras / co cards */
+html.theme-dark .co-job-modal-form .co-modal-input,
+html.theme-dark .co-modal-textarea {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--border);
+}
+
+/* ── Messages ─────────────────────────────────────────────── */
+html.theme-dark .msg-main-area,
+html.theme-dark .msg-scroll {
+  background: var(--card);
+  color: var(--text);
+}
+
+html.theme-dark .msg-convos,
+html.theme-dark .msg-chat {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+/* ── Toasts ───────────────────────────────────────────────── */
+html.theme-dark .lc-toast--ok {
+  background: linear-gradient(180deg, rgba(6, 78, 59, 0.55) 0%, var(--card) 52%);
+  color: var(--text);
+}
+
+html.theme-dark .lc-toast--err {
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.45) 0%, var(--card) 55%);
+  color: var(--text);
+}
+
+/* ── Login / Register / Choose role ───────────────────────── */
+html.theme-dark .login-page,
+html.theme-dark .register-page,
+html.theme-dark .company-register-page,
+html.theme-dark .choose-role-page {
+  color-scheme: dark;
+  background: var(--bg);
+}
+
+html.theme-dark .login-right {
+  background: var(--card);
+}
+
+html.theme-dark .register-page .register-right {
+  background: var(--card);
+}
+
+html.theme-dark .choose-role-page .right-panel {
+  background: var(--card);
+}
+
+html.theme-dark .login-tabs {
+  background: var(--surface-2);
+}
+
+html.theme-dark .tab-btn {
+  color: var(--muted);
+}
+
+html.theme-dark .tab-btn.active {
+  background: linear-gradient(
+    180deg,
+    rgba(59, 130, 246, 0.22) 0%,
+    var(--surface) 100%
+  );
+  color: var(--primary-mid);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    var(--lc-shadow-sm);
+}
+
+html.theme-dark .login-form-wrapper h2,
+html.theme-dark .login-form label,
+html.theme-dark .register-form-wrapper h2,
+html.theme-dark .register-form label {
+  color: var(--text);
+}
+
+html.theme-dark .login-subtitle,
+html.theme-dark .account-type,
+html.theme-dark .terms-row p,
+html.theme-dark .signin-text {
+  color: var(--muted);
+}
+
+html.theme-dark .signin-text--choose {
+  color: var(--muted);
+}
+
+html.theme-dark .input-box {
+  background: var(--input-bg);
+  border-color: var(--border);
+}
+
+html.theme-dark .input-box input {
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  -webkit-text-fill-color: var(--input-text) !important;
+}
+
+html.theme-dark .input-box input::placeholder {
+  color: var(--input-placeholder);
+}
+
+html.theme-dark .input-icon,
+html.theme-dark .eye-icon {
+  color: var(--muted);
+}
+
+html.theme-dark .divider-row span {
+  background: var(--border);
+}
+
+html.theme-dark .divider-row p {
+  color: var(--muted);
+}
+
+html.theme-dark .social-login-btn {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html.theme-dark .register-form input[type="text"],
+html.theme-dark .register-form input[type="email"],
+html.theme-dark .register-form input[type="password"] {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--input-text);
+}
+
+html.theme-dark .register-form input::placeholder {
+  color: var(--input-placeholder);
+}
+
+/* ChooseRole */
+html.theme-dark .choose-role-shell h2 {
+  color: var(--text);
+}
+
+html.theme-dark .choose-role-shell .subtitle {
+  color: var(--muted);
+}
+
+html.theme-dark .choose-role-shell .back-home-link {
+  color: var(--muted);
+}
+
+html.theme-dark .role-card {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+html.theme-dark .role-card.active {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+html.theme-dark .lc-role-card--seeker:not(.active) {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.14) 0%, var(--card) 55%);
+  border-color: var(--border);
+}
+
+html.theme-dark .lc-role-card--seeker.active {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.22) 0%, var(--surface-2) 100%);
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+html.theme-dark .lc-role-card--company:not(.active) {
+  background: linear-gradient(90deg, rgba(13, 148, 136, 0.14) 0%, var(--card) 55%);
+}
+
+html.theme-dark .lc-role-card--company.active {
+  background: linear-gradient(90deg, rgba(13, 148, 136, 0.22) 0%, var(--surface-2) 100%);
+}
+
+html.theme-dark .role-text h3 {
+  color: var(--text);
+}
+
+html.theme-dark .role-text p {
+  color: var(--muted);
+}
+
+html.theme-dark .role-icon-gray {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+html.theme-dark .check-circle:not(.checked) {
+  border-color: var(--border-soft);
+}
+
+html.theme-dark .social-btn {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html.theme-dark .or-divider span {
+  background: var(--border);
+}
+
+html.theme-dark .linkedin-icon {
+  border-color: var(--muted);
+}
+
+/* Home */
+html.theme-dark .feature-card {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+html.theme-dark .feature-card p {
+  color: var(--muted);
+}
+
+html.theme-dark .feature-badge.blue {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+html.theme-dark .feature-badge.green {
+  background: rgba(52, 211, 153, 0.16);
+}
+
+html.theme-dark .feature-badge.orange {
+  background: rgba(251, 146, 60, 0.16);
+}
+
+html.theme-dark .feature-badge.purple {
+  background: rgba(167, 139, 250, 0.16);
+}
+
+html.theme-dark .feature-badge.teal {
+  background: rgba(45, 212, 191, 0.14);
+}
+
+html.theme-dark .feature-badge.red {
+  background: rgba(248, 113, 113, 0.14);
+}
+
+html.theme-dark .category-btn:not(.active) {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+html.theme-dark .section-subtitle {
+  color: var(--muted);
+}
+
+html.theme-dark .jobs-side-text > p:first-child {
+  color: var(--muted);
+}
+
+html.theme-dark .companies-api-footnote {
+  color: var(--muted);
+}
+
+/* Candidate profile premium shell gradients */
+html.theme-dark .candidate-page .lc-candidate-profile-shell .candidate-header-card {
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--card) 100%);
+}
+
+html.theme-dark .candidate-page .lc-candidate-profile-shell .candidate-tabs-card {
+  background: linear-gradient(180deg, var(--card-soft) 0%, var(--card) 100%);
+}
+
+html.theme-dark .candidate-page .candidate-tab:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+html.theme-dark .candidate-profile-page .candidate-top-nav-item {
+  color: var(--text-secondary);
+}
+
+html.theme-dark .candidate-post-actions {
+  border-top-color: var(--border);
+}
+
+html.theme-dark .category-picker-field > label {
+  color: var(--text);
+}
+
+html.theme-dark .lc-category-select,
+html.theme-dark .lc-category-text {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--input-text);
+}
+
+html.theme-dark .lc-category-select option {
+  background: var(--card);
+  color: var(--text);
+}
+
+html.theme-dark .lc-category-select:invalid,
+html.theme-dark .lc-category-select.lc-category-select--placeholder {
+  color: var(--muted);
+}
+
+/* Generic auth panels if used */
+html.theme-dark .lc-auth-panel {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* Profile / admin surfaces (common class names) */
+html.theme-dark .profile-section-card,
+html.theme-dark .adm-card,
+html.theme-dark .adm-table-wrap {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html.theme-dark .notification-card {
+  background: var(--card);
+  color: var(--text);
+}
+
+/* Category picker popover */
+html.theme-dark .lc-category-picker-panel {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* CV keyword card */
+html.theme-dark .lc-cv-kw-card {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* ── Notifications (tabs, unread row, icon chips) ─────────── */
+html.theme-dark .notif-tabs {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, var(--card) 52%);
+  border-color: var(--border);
+  box-shadow: var(--lc-shadow-xs), 0 0 0 1px rgba(59, 130, 246, 0.08);
+}
+
+html.theme-dark .mark-read-btn {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.14) 0%, var(--surface-2) 100%);
+  border-color: var(--border);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .notification-card.unread {
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.16) 0%,
+    var(--card) 48%
+  );
+}
+
+html.theme-dark .notifications-empty-card {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.08) 0%, var(--card) 55%);
+  border-color: var(--border);
+}
+
+html.theme-dark .notification-icon.application {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .notification-icon.post {
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--primary-mid);
+}
+
+html.theme-dark .notification-icon.message {
+  background: rgba(52, 211, 153, 0.14);
+}
+
+html.theme-dark .notification-icon.system {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+html.theme-dark .notification-icon.follow {
+  background: rgba(59, 130, 246, 0.14);
+}
+
+html.theme-dark .notification-icon.like {
+  background: rgba(244, 63, 94, 0.12);
+}
+
+html.theme-dark .notification-icon.comment {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+html.theme-dark .notification-icon.verification {
+  background: rgba(129, 140, 248, 0.16);
+}
+
+html.theme-dark .notification-icon.job-alert {
+  background: rgba(52, 211, 153, 0.14);
+}
+
+/* ── Company dashboard surfaces ───────────────────────────── */
+html.theme-dark .co-panel-accent {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, var(--card) 44%);
+  border-color: var(--border);
+}
+
+html.theme-dark .lc-modal-panel,
+html.theme-dark .edit-profile-modal,
+html.theme-dark .feed-send-modal {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html.theme-dark .co-quick-actions {
+  background: linear-gradient(
+    145deg,
+    rgba(59, 130, 246, 0.1) 0%,
+    var(--card) 52%,
+    var(--card) 100%
+  );
+  border-color: var(--border);
+}
+
+html.theme-dark .co-dash-job-preview:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* ── Admin hero / panes ──────────────────────────────────── */
+html.theme-dark .adm-page-head--hero {
+  background: linear-gradient(
+    145deg,
+    rgba(59, 130, 246, 0.14) 0%,
+    var(--card) 52%
+  );
+  border-color: var(--border);
+}
+
+html.theme-dark .adm-card--pane {
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--card) 42%);
+  border-color: var(--border);
+}
+
+html.theme-dark .adm-stat-card--accent {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, var(--card) 48%);
+}
+
+/* Report textarea placeholder */
+html.theme-dark .lc-report-modal-textarea::placeholder {
+  color: var(--input-placeholder);
+}
+
+html.theme-dark .company-side-link--active-route {
+  background: rgba(59, 130, 246, 0.14) !important;
+  color: var(--primary-mid) !important;
+}

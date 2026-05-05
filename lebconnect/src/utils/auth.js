@@ -1,3 +1,5 @@
+import { normalizeStoredUser } from "./sessionUser";
+
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
 
@@ -26,7 +28,10 @@ export function getUser() {
 
 export function setAuth(token, user) {
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem(
+    USER_KEY,
+    JSON.stringify(user ? normalizeStoredUser(user) : user)
+  );
   broadcastAuthChanged();
 }
 
@@ -47,8 +52,13 @@ export function getRole() {
 
 /** Default app landing after login by role. */
 export function dashboardPath(role) {
-  if (role === "candidate") return "/candidate-dashboard";
-  if (role === "company") return "/company-dashboard";
-  if (role === "admin") return "/admin-dashboard";
-  return "/dashboard";
+  const r =
+    role === null || role === undefined ? "" : String(role).trim().toLowerCase();
+  if (r === "candidate") return "/candidate-dashboard";
+  if (r === "company") return "/company-dashboard";
+  if (r === "admin") return "/admin-dashboard";
+  return "/";
 }
+
+/** Canonical path for the main feed (Dashboard). */
+export const FEED_PATH = "/feed";

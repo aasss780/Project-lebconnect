@@ -1,0 +1,50 @@
+/* Fixed corner for auth / choose-role (above page chrome, does not scroll away) */
+.lc-auth-theme-corner {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  right: max(14px, env(safe-area-inset-right, 0px));
+  z-index: 120;
+}
+
+@media (max-width: 992px) {
+  .lc-auth-theme-corner {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+  }
+}
+
+.lc-home-nav-theme {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Public pages: match spec (card surface; stronger hover glow than default soft fill) */
+.lc-theme-toggle.lc-theme-toggle--solid {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--lc-shadow-xs);
+}
+
+.lc-theme-toggle.lc-theme-toggle--solid:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow:
+    var(--lc-shadow-xs),
+    0 0 20px rgba(59, 130, 246, 0.25);
+}
+
+html.theme-dark .lc-theme-toggle.lc-theme-toggle--solid:hover {
+  border-color: rgba(96, 165, 250, 0.45);
+  box-shadow:
+    var(--lc-shadow-xs),
+    0 0 22px rgba(59, 130, 246, 0.3);
+}
+
+/* Avoid overlapping fixed toggle with stacked auth hero (mobile column layout) */
+@media (max-width: 992px) {
+  .login-page .login-left-content,
+  .register-page .register-left-content,
+  .choose-role-page .left-content {
+    padding-top: max(52px, env(safe-area-inset-top, 0px));
+  }
+}

@@ -1,5 +1,20 @@
+import { useEffect, useState } from "react";
+
+import {
+  Bell,
+  Home,
+  Mail,
+  Search,
+} from "lucide-react";
+
 import UserAvatar from "./UserAvatar";
+import ThemeToggle from "./ThemeToggle";
 import { displayNameFromUser } from "../utils/avatar";
+import { safeUiString } from "../utils/uiString";
+
+const iconProps = {
+  strokeWidth: 2,
+};
 
 /**
  * Shared dashboard header (candidate / company / admin).
@@ -36,16 +51,25 @@ export default function AppTopbar({
   subtitle,
 }) {
   const displayName = displayNameFromUser(user);
-  const sub =
-    subtitle ??
-    (user?.role === "company"
+  const inferred =
+    user?.role === "company"
       ? "Company"
       : user?.role === "admin"
         ? "Administrator"
-        : user?.specialization || "Candidate");
+        : safeUiString(user?.specialization, "Candidate") || "Candidate";
+  const sub = safeUiString(subtitle, "") || inferred;
+
+  const [elevated, setElevated] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setElevated(window.scrollY > 10);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="topbar">
+    <header className={`topbar ${elevated ? "topbar--elevated" : ""}`}>
       <div className="topbar-left">
         <div
           className="brand-mark"
@@ -58,7 +82,7 @@ export default function AppTopbar({
         </div>
 
         <div className="top-search">
-          <span>⌕</span>
+          <Search className="top-search-svg" {...iconProps} size={18} aria-hidden />
           <input
             type="text"
             placeholder={searchPlaceholder}
@@ -72,25 +96,29 @@ export default function AppTopbar({
 
       <div className="topbar-right">
         <div
-          className="top-nav"
+          className="top-nav top-nav-item"
           role="button"
           tabIndex={0}
           onClick={onHomeClick}
           onKeyDown={(e) => e.key === "Enter" && onHomeClick()}
         >
-          <span>⌂</span>
+          <span className="top-nav-svg">
+            <Home {...iconProps} size={22} aria-hidden />
+          </span>
           <p>Home</p>
         </div>
 
         {showMessaging ? (
           <div
-            className="top-nav lc-msg-nav-active"
+            className="top-nav top-nav-item lc-msg-nav-active"
             role="button"
             tabIndex={0}
             onClick={onMessagesClick}
             onKeyDown={(e) => e.key === "Enter" && onMessagesClick?.()}
           >
-            <span>✉</span>
+            <span className="top-nav-svg">
+              <Mail {...iconProps} size={22} aria-hidden />
+            </span>
             <p>Messaging</p>
             {messagesUnread > 0 ? (
               <div className="notif-badge msg-top-badge">{messagesUnread}</div>
@@ -99,18 +127,22 @@ export default function AppTopbar({
         ) : null}
 
         <div
-          className="top-nav notif-nav"
+          className="top-nav top-nav-item notif-nav"
           role="button"
           tabIndex={0}
           onClick={onNotificationsClick}
           onKeyDown={(e) => e.key === "Enter" && onNotificationsClick()}
         >
-          <span>🔔</span>
+          <span className="top-nav-svg">
+            <Bell {...iconProps} size={22} aria-hidden />
+          </span>
           <p>Notifications</p>
           {notifUnread > 0 ? (
             <div className="notif-badge">{notifUnread}</div>
           ) : null}
         </div>
+
+        <ThemeToggle />
 
         <div className="top-divider"></div>
 

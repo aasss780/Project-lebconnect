@@ -1,7 +1,37 @@
+import { createElement } from "react";
 import { useNavigate } from "react-router-dom";
+
 import UserAvatar from "./UserAvatar";
+
+import {
+  Bell,
+  Heart,
+  BriefcaseBusiness,
+  ClipboardCheck,
+  LayoutDashboard,
+  LifeBuoy,
+  LogOut,
+  Mail,
+  Newspaper,
+  Search,
+  UserRound,
+  Building2,
+} from "lucide-react";
+
 import { displayNameFromUser } from "../utils/avatar";
+import { safeUiString } from "../utils/uiString";
 import "./CandidateSidebar.css";
+
+const IC = {
+  strokeWidth: 2,
+  size: 20,
+};
+
+function CsbNavIcon({ icon }) {
+  return (
+    <span className="csb-link-icon">{createElement(icon, IC)}</span>
+  );
+}
 
 /**
  * @typedef {"candidate" | "company"} SidebarVariant
@@ -13,6 +43,10 @@ function CandidateSidebar({
   activeKey,
   notifUnread = 0,
   messagesUnread = 0,
+  /** Candidate: unread application / interview notifications only */
+  applicationsUnread = 0,
+  /** Company: applications with decision still pending (badge on Applicants) */
+  pendingApplicantsCount = 0,
   onDashboard,
   onFeed,
   onFindJobs,
@@ -33,8 +67,10 @@ function CandidateSidebar({
   const displayName = displayNameFromUser(user);
   const isCompany = variant === "company";
   const subtitle = isCompany
-    ? user?.industry || "Company"
-    : user?.specialization || user?.role || "Candidate";
+    ? safeUiString(user?.industry, "Company") || "Company"
+    : safeUiString(user?.specialization, "") ||
+      safeUiString(user?.role, "Candidate") ||
+      "Candidate";
 
   const handleContactSupport =
     onContactSupport ?? (() => navigate("/messages?admin=true"));
@@ -58,7 +94,7 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "dashboard" ? "csb-link-active" : ""}`}
                 onClick={onDashboard}
               >
-                <span className="csb-link-icon">⌘</span>
+                <CsbNavIcon icon={LayoutDashboard} />
                 Dashboard
               </button>
 
@@ -67,7 +103,7 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "feed" ? "csb-link-active" : ""}`}
                 onClick={onFeed}
               >
-                <span className="csb-link-icon">◫</span>
+                <CsbNavIcon icon={Newspaper} />
                 Feed
               </button>
 
@@ -76,7 +112,7 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "jobs" ? "csb-link-active" : ""}`}
                 onClick={onMyJobs}
               >
-                <span className="csb-link-icon">💼</span>
+                <CsbNavIcon icon={BriefcaseBusiness} />
                 My Jobs
               </button>
 
@@ -85,8 +121,11 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "applicants" ? "csb-link-active" : ""}`}
                 onClick={onApplicants}
               >
-                <span className="csb-link-icon">☑</span>
+                <CsbNavIcon icon={ClipboardCheck} />
                 Applicants
+                {pendingApplicantsCount > 0 ? (
+                  <span className="csb-badge csb-badge--pill">{pendingApplicantsCount}</span>
+                ) : null}
               </button>
 
               <button
@@ -95,10 +134,10 @@ function CandidateSidebar({
                 onClick={() => onMessages?.()}
                 disabled={!onMessages}
               >
-                <span className="csb-link-icon">✉</span>
+                <CsbNavIcon icon={Mail} />
                 Messages
                 {messagesUnread > 0 ? (
-                  <span className="csb-badge">{messagesUnread}</span>
+                  <span className="csb-badge csb-badge--pill">{messagesUnread}</span>
                 ) : null}
               </button>
 
@@ -107,9 +146,11 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "notifications" ? "csb-link-active" : ""}`}
                 onClick={onNotifications}
               >
-                <span className="csb-link-icon">🔔</span>
+                <CsbNavIcon icon={Bell} />
                 Notifications
-                <span className="csb-badge">{notifUnread}</span>
+                {notifUnread > 0 ? (
+                  <span className="csb-badge csb-badge--pill">{notifUnread}</span>
+                ) : null}
               </button>
 
               <button
@@ -117,7 +158,7 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "myProfile" ? "csb-link-active" : ""}`}
                 onClick={onMyProfile}
               >
-                <span className="csb-link-icon">◌</span>
+                <CsbNavIcon icon={Building2} />
                 Company Profile
               </button>
             </>
@@ -128,7 +169,7 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "dashboard" ? "csb-link-active" : ""}`}
                 onClick={onDashboard}
               >
-                <span className="csb-link-icon">⌘</span>
+                <CsbNavIcon icon={LayoutDashboard} />
                 Dashboard
               </button>
 
@@ -137,7 +178,7 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "feed" ? "csb-link-active" : ""}`}
                 onClick={onFeed}
               >
-                <span className="csb-link-icon">◫</span>
+                <CsbNavIcon icon={Newspaper} />
                 Feed
               </button>
 
@@ -146,7 +187,7 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "findJobs" ? "csb-link-active" : ""}`}
                 onClick={onFindJobs}
               >
-                <span className="csb-link-icon">⌕</span>
+                <CsbNavIcon icon={Search} />
                 Find Jobs
               </button>
 
@@ -155,8 +196,13 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "applications" ? "csb-link-active" : ""}`}
                 onClick={onApplications}
               >
-                <span className="csb-link-icon">☑</span>
+                <CsbNavIcon icon={ClipboardCheck} />
                 Applications
+                {applicationsUnread > 0 ? (
+                  <span className="csb-badge csb-badge--pill csb-badge--accent">
+                    {applicationsUnread}
+                  </span>
+                ) : null}
               </button>
 
               <button
@@ -164,7 +210,16 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "savedJobs" ? "csb-link-active" : ""}`}
                 onClick={onSavedJobs}
               >
-                <span className="csb-link-icon">🔖</span>
+                <span
+                  className={`csb-link-icon csb-heart-wrap ${activeKey === "savedJobs" ? "csb-heart-wrap--filled" : ""}`}
+                  aria-hidden
+                >
+                  <Heart
+                    size={20}
+                    strokeWidth={2}
+                    fill={activeKey === "savedJobs" ? "currentColor" : "none"}
+                  />
+                </span>
                 Saved Jobs
               </button>
 
@@ -174,10 +229,10 @@ function CandidateSidebar({
                 onClick={() => onMessages?.()}
                 disabled={!onMessages}
               >
-                <span className="csb-link-icon">✉</span>
+                <CsbNavIcon icon={Mail} />
                 Messages
                 {messagesUnread > 0 ? (
-                  <span className="csb-badge">{messagesUnread}</span>
+                  <span className="csb-badge csb-badge--pill">{messagesUnread}</span>
                 ) : null}
               </button>
 
@@ -186,9 +241,11 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "notifications" ? "csb-link-active" : ""}`}
                 onClick={onNotifications}
               >
-                <span className="csb-link-icon">🔔</span>
+                <CsbNavIcon icon={Bell} />
                 Notifications
-                <span className="csb-badge">{notifUnread}</span>
+                {notifUnread > 0 ? (
+                  <span className="csb-badge csb-badge--pill">{notifUnread}</span>
+                ) : null}
               </button>
 
               <button
@@ -196,7 +253,7 @@ function CandidateSidebar({
                 className={`csb-link ${activeKey === "myProfile" ? "csb-link-active" : ""}`}
                 onClick={onMyProfile}
               >
-                <span className="csb-link-icon">◌</span>
+                <CsbNavIcon icon={UserRound} />
                 My Profile
               </button>
             </>
@@ -209,11 +266,11 @@ function CandidateSidebar({
             className="csb-link csb-link-support"
             onClick={handleContactSupport}
           >
-            <span className="csb-link-icon">💬</span>
+            <CsbNavIcon icon={LifeBuoy} />
             Contact Support
           </button>
           <button type="button" className="csb-link csb-link-signout" onClick={onSignOut}>
-            <span className="csb-link-icon">↲</span>
+            <CsbNavIcon icon={LogOut} />
             Sign Out
           </button>
         </div>

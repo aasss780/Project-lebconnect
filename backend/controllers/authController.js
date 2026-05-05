@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { query } = require("../config/db");
 const { USER_PUBLIC_COLUMNS } = require("../constants/userColumns");
-const { mapUser } = require("../utils/mappers");
+const { mapUser, userForClientSession } = require("../utils/mappers");
 const {
   resolveCandidateSpecialization,
   resolveCompanyIndustry,
@@ -52,7 +52,7 @@ const registerCandidate = async (req, res) => {
     res.status(201).json({
       message: "Candidate registered successfully",
       token: signToken(userId),
-      user: mapUser(rows[0]),
+      user: userForClientSession(mapUser(rows[0])),
     });
   } catch (err) {
     console.error(err);
@@ -101,7 +101,7 @@ const registerCompany = async (req, res) => {
     res.status(201).json({
       message: "Company registered successfully",
       token: signToken(userId),
-      user: mapUser(rows[0]),
+      user: userForClientSession(mapUser(rows[0])),
     });
   } catch (err) {
     console.error(err);
@@ -134,7 +134,7 @@ const login = async (req, res) => {
     res.json({
       message: "Login successful",
       token: signToken(row.id),
-      user: mapUser(safe[0]),
+      user: userForClientSession(mapUser(safe[0])),
     });
   } catch (err) {
     console.error(err);

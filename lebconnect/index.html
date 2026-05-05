@@ -1,10 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="theme-light">
   <head>
     <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>lebconnect</title>
+    <script>
+      (function () {
+        var K = "lebconnect-theme";
+        var t = "light";
+        try {
+          t = localStorage.getItem(K) || "light";
+        } catch (e) {}
+        if (t !== "dark" && t !== "light") t = "light";
+        var r = document.documentElement;
+        r.classList.remove("theme-light", "theme-dark");
+        r.classList.add(t === "dark" ? "theme-dark" : "theme-light");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

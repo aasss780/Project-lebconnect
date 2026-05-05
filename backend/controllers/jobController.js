@@ -2,6 +2,25 @@ const { query } = require("../config/db");
 const { mapJobJoined } = require("../utils/mappers");
 const { normalizeIndustry } = require("../utils/categoryNormalize");
 const { industryDisplayLooksValid } = require("../utils/categoryValidation");
+const {
+  notifyMatchingSavedSearches,
+} = require("./savedSearchController");
+
+const { calculateJobMatch } = require("../utils/calculateJobMatch");
+
+function mapJobJoinedWithViewer(req, row) {
+  const job = mapJobJoined(row);
+  if (!job) return job;
+  if (req.user && String(req.user.role || "").toLowerCase() === "candidate") {
+    try {
+      return { ...job, candidateMatch: calculateJobMatch(req.user, job) };
+    } catch (err) {
+      console.error("[mapJobJoinedWithViewer]", err);
+      return job;
+    }
+  }
+  return job;
+}
 
 const JOB_SELECT_JOIN = `
   SELECT j.*,
@@ -10,7 +29,8 @@ const JOB_SELECT_JOIN = `
          u.company_name,
          u.industry AS company_industry,
          u.location AS company_location,
-         u.logo AS company_logo
+         u.logo AS company_logo,
+         u.is_verified AS company_is_verified
   FROM jobs j
   JOIN users u ON u.id = j.company_id
 `;
@@ -49,6 +69,8 @@ async function createJob(req, res) {
     );
 
     const rows = await query(`${JOB_SELECT_JOIN} WHERE j.id = ?`, [result.insertId]);
+    const mapped = mapJobJoined(rows[0]);
+    await notifyMatchingSavedSearches(mapped);
 
     const uRows = await query(`SELECT industry FROM users WHERE id = ?`, [req.user.id]);
     const bucket = normalizeIndustry(uRows[0]?.industry);
@@ -57,10 +79,23 @@ async function createJob(req, res) {
       req.user.id,
     ]);
 
-    res.status(201).json({ message: "Job created", job: mapJobJoined(rows[0]) });
+    res.status(201).json({ message: "Job created", job: mapped });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to create job", error: err.message });
+  }
+}
+
+async function listMyJobs(req, res) {
+  try {
+    const rows = await query(
+      `${JOB_SELECT_JOIN} WHERE j.company_id = ? ORDER BY j.created_at DESC`,
+      [req.user.id]
+    );
+    res.json(rows.map(mapJobJoined));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to list your jobs", error: err.message });
   }
 }
 
@@ -124,7 +159,7 @@ async function listJobs(req, res) {
     sql += ` LIMIT ${lim} OFFSET ${sk}`;
 
     const rows = await query(sql, params);
-    res.json(rows.map(mapJobJoined));
+    res.json(rows.map((r) => mapJobJoinedWithViewer(req, r)));
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to list jobs", error: err.message });
@@ -140,7 +175,7 @@ async function getLatestJobs(req, res) {
        ORDER BY j.created_at DESC
        LIMIT ${limit}`
     );
-    res.json(rows.map(mapJobJoined));
+    res.json(rows.map((r) => mapJobJoinedWithViewer(req, r)));
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to load jobs", error: err.message });
@@ -154,7 +189,7 @@ async function getJobById(req, res) {
     if (!rows.length) {
       return res.status(404).json({ message: "Job not found" });
     }
-    res.json(mapJobJoined(rows[0]));
+    res.json(mapJobJoinedWithViewer(req, rows[0]));
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to load job", error: err.message });
@@ -221,8 +256,21 @@ async function deleteJob(req, res) {
       return res.status(403).json({ message: "You can only delete your own jobs" });
     }
 
+    const linkedPosts = await query(`SELECT id FROM posts WHERE job_id = ?`, [jid]);
+    const postIds = linkedPosts.map((p) => Number(p.id)).filter(Number.isFinite);
+    if (postIds.length) {
+      const ph = postIds.map(() => "?").join(",");
+      await query(`DELETE FROM comments WHERE post_id IN (${ph})`, postIds);
+      await query(`DELETE FROM post_likes WHERE post_id IN (${ph})`, postIds);
+      await query(
+        `DELETE FROM reports WHERE target_type = 'post' AND target_id IN (${ph})`,
+        postIds
+      );
+      await query(`DELETE FROM posts WHERE id IN (${ph})`, postIds);
+    }
+
     await query(`DELETE FROM jobs WHERE id = ?`, [jid]);
-    res.json({ message: "Job deleted" });
+    res.json({ message: "Job and related posts deleted successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to delete job", error: err.message });
@@ -291,7 +339,7 @@ async function getMySavedJobs(req, res) {
        ORDER BY sj.created_at DESC`,
       [req.user.id]
     );
-    res.json(rows.map(mapJobJoined));
+    res.json(rows.map((r) => mapJobJoinedWithViewer(req, r)));
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to load saved jobs", error: err.message });
@@ -301,6 +349,7 @@ async function getMySavedJobs(req, res) {
 module.exports = {
   createJob,
   listJobs,
+  listMyJobs,
   getLatestJobs,
   getJobById,
   updateJob,

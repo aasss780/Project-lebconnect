@@ -1,0 +1,644 @@
+/**
+ * LebConnect — global UX polish (loaded last from App.jsx).
+ * Harmonizes spacing, buttons, cards, forms, modals, tabs, and chrome across routes.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Rhythm: page grids & main columns                                           */
+/* -------------------------------------------------------------------------- */
+
+.dashboard-body,
+.candidate-page .layout {
+  padding: clamp(20px, 2.2vw, 32px) clamp(20px, 2.2vw, 32px) 40px;
+  gap: 24px;
+}
+
+.adm-stack {
+  gap: 24px;
+}
+
+.adm-stat-grid {
+  gap: 20px;
+}
+
+.msg-shell {
+  gap: 24px;
+}
+
+.msg-scroll {
+  gap: 14px;
+  padding: 18px;
+}
+
+.msg-main-area {
+  padding: 24px 24px 32px;
+}
+
+.lc-notifications-main {
+  padding: 0 4px;
+}
+
+.notifications-list {
+  gap: 14px;
+}
+
+.notification-card {
+  border-color: var(--lc-card-border, #dbe7f5) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Top bars & search                                                           */
+/* -------------------------------------------------------------------------- */
+
+.topbar,
+.notifications-topbar {
+  padding-left: clamp(16px, 2vw, 32px);
+  padding-right: clamp(16px, 2vw, 32px);
+}
+
+.topbar-right,
+.notifications-topbar-right {
+  gap: 16px;
+  align-items: center;
+}
+
+.search-box,
+.top-search,
+.notif-search {
+  min-height: 46px;
+  height: auto;
+  border-color: var(--lc-card-border, #dbe7f5) !important;
+}
+
+.search-box input,
+.top-search input,
+.notif-search input {
+  min-height: 44px;
+}
+
+.top-nav-item {
+  padding: 4px 6px 0;
+  border-radius: 12px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.top-nav-item:hover:not(.active) {
+  background: var(--social-bg);
+  color: var(--lc-brand, #0a66c2);
+}
+
+.top-nav {
+  border-radius: 12px;
+  transition:
+    background var(--lc-duration) var(--lc-ease-out),
+    color var(--lc-duration) var(--lc-ease-out),
+    transform var(--lc-duration) var(--lc-ease-out);
+}
+
+.top-nav:hover {
+  background: var(--social-bg);
+  transform: translateY(-1px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sidebars (feed + candidate)                                                 */
+/* -------------------------------------------------------------------------- */
+
+.sidebar-menu {
+  gap: 10px;
+  padding: 18px 14px;
+}
+
+.menu-item {
+  min-height: 48px;
+  height: auto;
+  border-radius: 13px;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.menu-item:hover:not(.active) {
+  background: var(--social-bg);
+}
+
+.csb-links-scroll {
+  gap: 6px;
+  padding: 12px 14px 8px;
+}
+
+.csb-link {
+  min-height: 44px;
+  height: auto;
+  border-radius: 13px;
+}
+
+.admin-csb-links {
+  gap: 8px;
+  padding: 14px 14px 10px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feed: composer, posts, filters                                              */
+/* -------------------------------------------------------------------------- */
+
+.feed-center-stack {
+  padding: 16px 12px 28px;
+}
+
+.feed-filter-bar {
+  min-height: 56px;
+  height: auto !important;
+  flex-wrap: wrap;
+  row-gap: 12px;
+  column-gap: 16px;
+  padding: 12px 20px !important;
+  align-items: center;
+}
+
+.filter-left {
+  gap: 12px;
+}
+
+.composer-card {
+  padding: 20px 22px 16px !important;
+  margin-bottom: 24px !important;
+}
+
+.composer-top {
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+.composer-emoji-row {
+  gap: 8px;
+  padding: 8px 0 12px;
+}
+
+.composer-actions {
+  gap: 12px !important;
+}
+
+.post-card {
+  margin-bottom: 24px;
+  border-color: var(--lc-card-border, #dbe7f5) !important;
+}
+
+.post-actions {
+  gap: 10px 14px;
+}
+
+.composer-mode-toggle {
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.composer-mode-toggle button {
+  min-height: 44px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.composer-photo-btn,
+.composer-submit-btn,
+.composer-job-cancel-btn,
+.composer-job-submit-btn,
+.composer-job-inline-photo-btn {
+  min-height: 44px;
+  border-radius: 13px !important;
+  transition: all 0.2s ease !important;
+}
+
+.composer-submit-btn:hover:not(:disabled),
+.composer-job-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.composer-job-card {
+  margin-top: 10px;
+  padding: 18px 20px 16px !important;
+  border-radius: 16px !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Primary / secondary / danger buttons (shared class names)                   */
+/* -------------------------------------------------------------------------- */
+
+button.primary-btn,
+a.primary-btn,
+button.candidate-primary-btn,
+button.signin-btn,
+button.continue-btn,
+button.footer-cta-btn,
+button.msg-send-btn,
+.nav-btn.nav-btn-filled,
+button.apply-btn:not(.ghost):not(.danger),
+button.composer-submit-btn,
+button.composer-job-submit-btn {
+  border-radius: 13px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  background: var(--lc-grad-primary);
+  color: var(--lc-on-primary) !important;
+  border: none;
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.06),
+    0 10px 26px rgba(10, 102, 194, 0.22);
+  transition: all 0.2s ease;
+}
+
+button.primary-btn:hover:not(:disabled),
+a.primary-btn:hover:not(:disabled),
+button.candidate-primary-btn:hover:not(:disabled),
+button.signin-btn:hover:not(:disabled),
+button.continue-btn:hover:not(:disabled),
+button.footer-cta-btn:hover:not(:disabled),
+button.msg-send-btn:hover:not(:disabled),
+.nav-btn.nav-btn-filled:hover:not(:disabled),
+button.apply-btn:not(.ghost):not(.danger):hover:not(:disabled),
+button.composer-submit-btn:hover:not(:disabled),
+button.composer-job-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.08),
+    0 14px 32px rgba(10, 102, 194, 0.28);
+  filter: brightness(1.02);
+}
+
+button.primary-btn:active:not(:disabled),
+a.primary-btn:active:not(:disabled),
+button.candidate-primary-btn:active:not(:disabled),
+button.signin-btn:active:not(:disabled),
+button.continue-btn:active:not(:disabled),
+button.footer-cta-btn:active:not(:disabled),
+button.msg-send-btn:active:not(:disabled),
+.nav-btn.nav-btn-filled:active:not(:disabled),
+button.apply-btn:not(.ghost):not(.danger):active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Welcome strip — keep light CTA on blue card */
+.welcome-card .primary-btn {
+  background: var(--card) !important;
+  color: var(--lc-brand, #0a66c2) !important;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.12) !important;
+}
+
+.welcome-card .primary-btn:hover:not(:disabled) {
+  background: var(--primary-soft) !important;
+  filter: none !important;
+  transform: translateY(-1px);
+}
+
+.welcome-card .primary-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button.outline-btn,
+.nav-btn.nav-btn-outline {
+  border-radius: 13px;
+  font-weight: 700;
+  border: 1.5px solid var(--lc-brand, #0a66c2) !important;
+  background: var(--card) !important;
+  color: var(--lc-brand, #0a66c2) !important;
+  transition: all 0.2s ease;
+}
+
+button.outline-btn:hover:not(:disabled),
+.nav-btn.nav-btn-outline:hover:not(:disabled) {
+  background: var(--primary-soft, #eff6ff) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(10, 102, 194, 0.12);
+}
+
+button.outline-btn:active:not(:disabled),
+.nav-btn.nav-btn-outline:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.primary-btn--following {
+  opacity: 1;
+}
+
+button.apply-btn.ghost,
+button.apply-btn.danger,
+a.hero-btn.hero-btn-ghost {
+  transition: all 0.2s ease;
+}
+
+button.apply-btn.danger {
+  background: linear-gradient(135deg, #f87171, #dc2626) !important;
+  color: var(--lc-on-primary) !important;
+  border: none !important;
+}
+
+button.apply-btn.danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(220, 38, 38, 0.28);
+}
+
+button.apply-btn.ghost {
+  background: transparent !important;
+  color: var(--lc-brand, #0a66c2) !important;
+  border: 1.5px solid var(--border-strong, #cbd5e1) !important;
+}
+
+button.apply-btn.ghost:hover:not(:disabled) {
+  background: var(--primary-soft, #eff6ff) !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+}
+
+.social-login-btn,
+.social-btn {
+  border-radius: 13px !important;
+  min-height: 46px;
+  transition: all 0.2s ease;
+}
+
+.social-login-btn:hover:not(:disabled),
+.social-btn:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.35) !important;
+  background: #f8fafc !important;
+  transform: translateY(-1px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Compact job row actions (slightly taller for touch)                         */
+/* -------------------------------------------------------------------------- */
+
+.apply-btn,
+.applied-btn,
+.message-btn,
+.view-job-btn {
+  min-height: 40px;
+  height: auto !important;
+  padding: 0 16px !important;
+  border-radius: 12px !important;
+}
+
+.application-actions {
+  gap: 12px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tabs & pills                                                                */
+/* -------------------------------------------------------------------------- */
+
+.subtabs,
+.application-tabs {
+  gap: 10px;
+  padding: 6px 10px !important;
+  margin-bottom: 24px;
+}
+
+.subtab,
+.app-tab {
+  min-height: 44px;
+  border-radius: 12px !important;
+  transition: all 0.2s ease;
+}
+
+.subtab:hover:not(.active),
+.app-tab:hover:not(.active) {
+  background: rgba(239, 246, 255, 0.75);
+  color: var(--lc-brand, #0a66c2);
+}
+
+.filter-pill {
+  min-height: 38px;
+  padding: 0 16px !important;
+}
+
+.adm-pill-btn {
+  border-radius: 999px !important;
+  min-height: 42px;
+  padding: 0 16px !important;
+  transition: all 0.2s ease;
+}
+
+.adm-pill-btn:hover:not(.adm-pill-btn--primary):not(:disabled) {
+  background: rgba(239, 246, 255, 0.9);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Admin buttons                                                               */
+/* -------------------------------------------------------------------------- */
+
+.adm-btn {
+  border-radius: 12px !important;
+  min-height: 40px;
+  transition: all 0.2s ease;
+}
+
+.adm-btn--sm {
+  min-height: 36px;
+}
+
+.adm-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.adm-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.adm-btn:disabled {
+  opacity: 0.55 !important;
+}
+
+.adm-btn--ghost:hover:not(:disabled),
+.adm-filter-pill:hover,
+.notif-tab:not(.active):hover,
+.app-tab:hover:not(.active),
+.subtab:hover:not(.active) {
+  box-shadow: none;
+}
+
+.adm-btn--accent {
+  background: linear-gradient(180deg, var(--primary-soft), var(--card)) !important;
+  border-color: var(--lc-card-border, #dbe7f5) !important;
+  color: var(--lc-brand, #0a66c2) !important;
+}
+
+.adm-btn--danger:hover:not(:disabled) {
+  border-color: #fca5a5 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cards & stats                                                               */
+/* -------------------------------------------------------------------------- */
+
+.mini-stat-card,
+.summary-card,
+.adm-stat-card,
+.adm-card,
+.msg-convos,
+.msg-chat {
+  border-color: var(--lc-card-border, #dbe7f5) !important;
+}
+
+.mini-stat-card,
+.summary-card {
+  padding: 22px !important;
+}
+
+.adm-stat-card {
+  padding: 22px !important;
+}
+
+.adm-card {
+  padding: 22px 24px !important;
+}
+
+.adm-job-row {
+  padding: 20px 22px !important;
+  gap: 18px !important;
+  border-radius: 16px;
+}
+
+.find-job-card,
+.job-card {
+  margin-bottom: 18px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Auth / register forms                                                       */
+/* -------------------------------------------------------------------------- */
+
+.login-form .input-box input,
+.register-form > input,
+.register-form input[type="text"],
+.register-form input[type="email"],
+.register-form input[type="password"],
+.company-register-page .register-form input {
+  min-height: 48px;
+  border-radius: 13px !important;
+  border-color: var(--border-strong, #cbd5e1) !important;
+  background: transparent !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.register-form select,
+.register-form textarea,
+.company-register-page .register-form select,
+.company-register-page .register-form textarea {
+  min-height: 48px;
+  border-radius: 13px !important;
+  border: 1.5px solid var(--border-strong, #cbd5e1) !important;
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+}
+
+.register-form textarea,
+.company-register-page .register-form textarea {
+  min-height: 110px;
+  padding: 12px 14px;
+}
+
+.login-form .input-box input:focus,
+.register-form > input:focus,
+.register-form input[type="text"]:focus,
+.register-form input[type="email"]:focus,
+.register-form input[type="password"]:focus,
+.company-register-page .register-form input:focus {
+  border-color: var(--primary-mid, #3b82f6) !important;
+  box-shadow: 0 0 0 3px var(--primary-ring) !important;
+}
+
+.register-form > label,
+.register-form label {
+  margin-top: 4px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.register-form > input + .lc-inline-error,
+.register-form > span.lc-inline-error {
+  margin-top: 6px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Profiles                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.profile-header-actions {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.profile-tabs-card {
+  border-color: var(--lc-card-border, #dbe7f5) !important;
+  border-radius: 20px !important;
+  margin-top: 24px !important;
+}
+
+.profile-tabs {
+  gap: 0;
+}
+
+.profile-tab {
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.circle-btn {
+  border-radius: 13px !important;
+  transition: all 0.2s ease;
+}
+
+.circle-btn:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.35);
+  color: var(--lc-brand, #0a66c2);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Focus rings (keyboard)                                                      */
+/* -------------------------------------------------------------------------- */
+
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid rgba(10, 102, 194, 0.35);
+  outline-offset: 2px;
+}
+
+.lc-modal-panel {
+  width: min(560px, calc(100vw - 28px));
+}
+
+.lc-modal-panel--wide {
+  width: min(760px, calc(100vw - 28px));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reduced motion                                                              */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 800px) {
+  .dashboard-body,
+  .candidate-page .layout {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .msg-main-area {
+    padding: 14px 10px 20px;
+  }
+
+  .adm-card,
+  .mini-stat-card,
+  .summary-card {
+    padding: 18px !important;
+  }
+}

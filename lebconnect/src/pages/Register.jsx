@@ -3,14 +3,25 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import ErrorMessage from "../components/ErrorMessage";
 import CategoryPicker from "../components/CategoryPicker";
+import { useToast } from "../context/ToastContext";
 import {
   composeCategoryErrors,
   OTHER_LABEL,
 } from "../constants/categories";
+import { motion } from "framer-motion";
+
+import { lcMotionPage } from "../utils/motionProps";
+import ThemeToggle from "../components/ThemeToggle";
+import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
+import { analyzePasswordStrength } from "../utils/passwordStrength";
 import "./Register.css";
+
+const MIN_PASSWORD = 6;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function Register() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -22,6 +33,10 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
     specCat: "",
     specCust: "",
   });
@@ -29,40 +44,60 @@ function Register() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setFieldErrors({ specCat: "", specCust: "" });
+    const next = {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      specCat: "",
+      specCust: "",
+    };
+
     const fullName = form.fullName.trim();
     const email = form.email.trim();
     const catErrs = composeCategoryErrors(
       form.specializationCategory,
       form.specializationOther
     );
-    if (catErrs.category || catErrs.custom) {
-      setFieldErrors({ specCat: catErrs.category, specCust: catErrs.custom });
-      return;
+    next.specCat = catErrs.category || "";
+    next.specCust = catErrs.custom || "";
+
+    if (!fullName) next.fullName = "Please enter your full name.";
+    else if (fullName.length < 2)
+      next.fullName = "Use at least 2 characters for your name.";
+
+    if (!email) next.email = "Please enter your email.";
+    else if (!EMAIL_RE.test(email))
+      next.email = "Enter a valid email address.";
+
+    if (!form.password) next.password = "Please choose a password.";
+    else if (form.password.length < MIN_PASSWORD)
+      next.password = `Use at least ${MIN_PASSWORD} characters.`;
+    else if (analyzePasswordStrength(form.password).score === 0) {
+      next.password = "Please use a stronger password.";
     }
+
+    if (!form.confirmPassword)
+      next.confirmPassword = "Please confirm your password.";
+    else if (form.password !== form.confirmPassword)
+      next.confirmPassword = "Passwords do not match.";
+
+    setFieldErrors(next);
+    if (Object.values(next).some(Boolean)) return;
+
     const specializationOther =
       form.specializationCategory === OTHER_LABEL
         ? form.specializationOther.trim()
         : "";
-    if (
-      !fullName ||
-      !email ||
-      !form.specializationCategory ||
-      !form.password ||
-      !form.confirmPassword
-    ) {
-      setError("Please fill in all fields.");
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+
     setLoading(true);
     try {
       await api.post("/api/auth/register/candidate", {
@@ -72,6 +107,7 @@ function Register() {
         specializationCategory: form.specializationCategory.trim(),
         specializationOther,
       });
+      toast.success("Account created. Sign in to continue.");
       navigate("/login");
     } catch (err) {
       const msg =
@@ -85,12 +121,24 @@ function Register() {
   };
 
   return (
-    <div className="register-page">
+    <motion.div className="register-page" {...lcMotionPage(20)}>
+      <div className="lc-auth-theme-corner">
+        <ThemeToggle solid />
+      </div>
       <div className="register-left">
         <div className="register-overlay"></div>
 
         <div className="register-left-content">
-          <div className="top-white-dot"></div>
+          <div
+            className="brand-mark auth-shell-brand"
+            role="button"
+            tabIndex={0}
+            aria-label="LebConnect Home"
+            onClick={() => navigate("/")}
+            onKeyDown={(e) => e.key === "Enter" && navigate("/")}
+          >
+            <div className="brand-center" />
+          </div>
 
           <div className="join-badge">
             <span className="join-badge-dot"></span>
@@ -124,7 +172,7 @@ function Register() {
                   />
                 </svg>
               </div>
-              <span>Browse 5,400+ job listings</span>
+              <span>Browse roles from Lebanese employers</span>
             </div>
 
             <div className="feature-item">
@@ -189,26 +237,10 @@ function Register() {
             </div>
           </div>
 
-          <div className="bottom-joined">
-            <div className="avatars">
-              <img
-                src="https://randomuser.me/api/portraits/men/32.jpg"
-                alt="avatar1"
-              />
-              <img
-                src="https://randomuser.me/api/portraits/women/44.jpg"
-                alt="avatar2"
-              />
-              <img
-                src="https://randomuser.me/api/portraits/men/67.jpg"
-                alt="avatar3"
-              />
-            </div>
-
-            <p>
-              <strong>220+ professionals</strong> joined this week
-            </p>
-          </div>
+          <p className="auth-left-trust-muted">
+            Built for candidates and hiring teams in Lebanon — no demo accounts, no fake
+            join counts.
+          </p>
         </div>
       </div>
 
@@ -239,25 +271,41 @@ function Register() {
           <ErrorMessage message={error} onDismiss={() => setError("")} />
 
           <form className="register-form" onSubmit={handleSubmit}>
-            <label>Full Name</label>
+            <label htmlFor="reg-fullName">Full Name</label>
             <input
+              id="reg-fullName"
               name="fullName"
               type="text"
               placeholder="Your full name"
               value={form.fullName}
               onChange={handleChange}
-              required
+              className={fieldErrors.fullName ? "lc-input-has-error" : ""}
+              autoComplete="name"
+              aria-invalid={!!fieldErrors.fullName}
             />
+            {fieldErrors.fullName ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.fullName}
+              </span>
+            ) : null}
 
-            <label>Email Address</label>
+            <label htmlFor="reg-email">Email Address</label>
             <input
+              id="reg-email"
               name="email"
               type="email"
               placeholder="your@email.com"
               value={form.email}
               onChange={handleChange}
-              required
+              className={fieldErrors.email ? "lc-input-has-error" : ""}
+              autoComplete="email"
+              aria-invalid={!!fieldErrors.email}
             />
+            {fieldErrors.email ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.email}
+              </span>
+            ) : null}
 
             <CategoryPicker
               variant="candidate"
@@ -266,34 +314,52 @@ function Register() {
               custom={form.specializationOther}
               categoryError={fieldErrors.specCat}
               customError={fieldErrors.specCust}
-              onCategoryChange={(v) =>
-                setForm((prev) => ({ ...prev, specializationCategory: v }))
-              }
-              onCustomChange={(v) =>
-                setForm((prev) => ({ ...prev, specializationOther: v }))
-              }
+              onCategoryChange={(v) => {
+                setForm((prev) => ({ ...prev, specializationCategory: v }));
+                setFieldErrors((prev) => ({ ...prev, specCat: "", specCust: "" }));
+              }}
+              onCustomChange={(v) => {
+                setForm((prev) => ({ ...prev, specializationOther: v }));
+                setFieldErrors((prev) => ({ ...prev, specCust: "" }));
+              }}
             />
 
-            <label>Password</label>
+            <label htmlFor="reg-password">Password</label>
             <input
+              id="reg-password"
               name="password"
               type="password"
-              placeholder="Min. 8 characters"
+              placeholder={`Minimum ${MIN_PASSWORD} characters`}
               value={form.password}
               onChange={handleChange}
-              required
-              minLength={6}
+              className={fieldErrors.password ? "lc-input-has-error" : ""}
+              autoComplete="new-password"
+              aria-invalid={!!fieldErrors.password}
             />
+            <PasswordStrengthMeter password={form.password} />
+            {fieldErrors.password ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.password}
+              </span>
+            ) : null}
 
-            <label>Confirm Password</label>
+            <label htmlFor="reg-confirmPassword">Confirm Password</label>
             <input
+              id="reg-confirmPassword"
               name="confirmPassword"
               type="password"
               placeholder="Repeat password"
               value={form.confirmPassword}
               onChange={handleChange}
-              required
+              className={fieldErrors.confirmPassword ? "lc-input-has-error" : ""}
+              autoComplete="new-password"
+              aria-invalid={!!fieldErrors.confirmPassword}
             />
+            {fieldErrors.confirmPassword ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.confirmPassword}
+              </span>
+            ) : null}
 
             <div className="terms-row">
               <input type="checkbox" required />
@@ -324,7 +390,7 @@ function Register() {
           </p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

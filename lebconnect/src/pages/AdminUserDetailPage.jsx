@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../api/axios";
 import AppTopbar from "../components/AppTopbar";
 import AppSidebar from "../components/AppSidebar";
+import Modal from "../components/Modal";
 import UserAvatar from "../components/UserAvatar";
+import { Loader2, Mail, Trash2 } from "lucide-react";
 import { formatRelativeTime } from "../utils/format";
-import { getUser } from "../utils/auth";
+import { getUser, logout } from "../utils/auth";
+import {
+  ADMIN_MESSAGES_PATH,
+  ADMIN_NOTIFICATIONS_PATH,
+  adminDashboardPathForTab,
+} from "../utils/adminNav";
+import { motion } from "framer-motion";
+import { lcMotionPage } from "../utils/motionProps";
+import "./Dashboard.css";
+import "./CandidateDashboard.css";
 import "./AdminDashboard.css";
 
 function displayNameFromRow(u) {
@@ -16,6 +27,7 @@ function displayNameFromRow(u) {
 export default function AdminUserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const me = getUser();
   const uid = Number(id);
 
@@ -26,6 +38,7 @@ export default function AdminUserDetailPage() {
   const [notifUnread, setNotifUnread] = useState(0);
   const [messagesUnread, setMessagesUnread] = useState(0);
   const [deletingPostId, setDeletingPostId] = useState(null);
+  const [postDeleteTarget, setPostDeleteTarget] = useState(null);
 
   const loadUnread = useCallback(async () => {
     try {
@@ -76,24 +89,32 @@ export default function AdminUserDetailPage() {
     void loadMsgUnread();
   }, [loadUnread, loadMsgUnread]);
 
+  useEffect(() => {
+    const s = location.state;
+    if (!s || loading) return;
+    if (!s.scrollPosts && !s.scrollJobs && !s.scrollApps) return;
+    requestAnimationFrame(() => {
+      if (s.scrollPosts) document.getElementById("adm-sec-posts")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      else if (s.scrollJobs) document.getElementById("adm-sec-jobs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      else if (s.scrollApps) document.getElementById("adm-sec-apps")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    navigate(".", { replace: true, state: {} });
+  }, [loading, location.state, navigate]);
+
   const signOut = () => {
-    try {
-      localStorage.clear();
-    } catch {
-      /* ignore */
-    }
+    logout();
     navigate("/login", { replace: true });
   };
 
   const goDash = () => navigate("/admin-dashboard");
 
-  const handleDeletePost = async (postId) => {
-    const pid = Number(postId);
+  const confirmDeletePost = async () => {
+    const pid = Number(postDeleteTarget?.pid);
     if (!Number.isFinite(pid)) return;
-    if (!window.confirm("Delete this post permanently?")) return;
     setDeletingPostId(pid);
     try {
       await api.delete(`/api/posts/${pid}`);
+      setPostDeleteTarget(null);
       await loadDetail();
     } catch (e) {
       alert(e.response?.data?.message || "Could not delete post");
@@ -112,8 +133,10 @@ export default function AdminUserDetailPage() {
 
   const profileType = payload?.profileType || "";
 
+  const targetUid = user?.id ?? user?._id ?? uid;
+
   return (
-    <div className="candidate-page admin-app-page">
+    <motion.div className="candidate-page admin-app-page" {...lcMotionPage()}>
       <AppTopbar
         user={me}
         subtitle="Administrator"
@@ -126,34 +149,49 @@ export default function AdminUserDetailPage() {
         showMessaging
         onLogoClick={goDash}
         onHomeClick={goDash}
-        onMessagesClick={() => navigate("/admin/messages")}
-        onNotificationsClick={() => navigate("/notifications")}
+        onMessagesClick={() => navigate(ADMIN_MESSAGES_PATH)}
+        onNotificationsClick={() => navigate(ADMIN_NOTIFICATIONS_PATH)}
       />
 
-      <div className="layout">
+      <div className="dashboard-body">
         <AppSidebar
           user={me}
           activeSection="users"
           notifUnread={notifUnread}
+          messagesUnread={messagesUnread}
           onDashboard={goDash}
-          onUsers={() => navigate("/admin-dashboard?tab=users")}
-          onJobs={() => navigate("/admin-dashboard?tab=jobs")}
-          onComplaints={() => navigate("/admin-dashboard?tab=complaints")}
-          onMessages={() => navigate("/admin/messages")}
-          onNotifications={() => navigate("/notifications")}
+          onUsers={() => navigate(adminDashboardPathForTab("users"))}
+          onJobs={() => navigate(adminDashboardPathForTab("jobs"))}
+          onComplaints={() => navigate(adminDashboardPathForTab("complaints"))}
+          onModeration={() => navigate(adminDashboardPathForTab("moderation"))}
+          onMessages={() => navigate(ADMIN_MESSAGES_PATH)}
+          onNotifications={() => navigate(ADMIN_NOTIFICATIONS_PATH)}
           onSignOut={signOut}
         />
 
-        <main className="main-content adm-main adm-user-detail">
+        <main className="main-content adm-main adm-user-detail lc-adm-main">
           <div className="adm-stack">
             <div className="adm-page-head adm-user-detail-head">
               <div>
-                <button type="button" className="adm-btn adm-btn--ghost adm-btn--sm" onClick={() => navigate("/admin-dashboard?tab=users")}>
+                <button type="button" className="adm-btn adm-btn--ghost adm-btn--sm" onClick={() => navigate(adminDashboardPathForTab("users"))}>
                   ← Back to users
                 </button>
                 <h1>User profile</h1>
                 <p className="adm-page-sub">Admin view · ID {id}</p>
               </div>
+              {user && Number.isFinite(Number(targetUid)) ? (
+                <button
+                  type="button"
+                  className="adm-btn adm-btn--accent lc-adm-ic-btn"
+                  onClick={() =>
+                    navigate(
+                      `${ADMIN_MESSAGES_PATH}?userId=${encodeURIComponent(String(targetUid))}`
+                    )
+                  }
+                >
+                  <Mail size={16} strokeWidth={2} aria-hidden /> Message user
+                </button>
+              ) : null}
             </div>
 
             {loading ? <p className="adm-empty">Loading…</p> : null}
@@ -207,7 +245,7 @@ export default function AdminUserDetailPage() {
                 </div>
 
                 {profileType === "candidate" && Array.isArray(payload.applications) ? (
-                  <div className="adm-card">
+                  <div className="adm-card" id="adm-sec-apps">
                     <div className="adm-card-head">
                       <h2>Applications</h2>
                     </div>
@@ -231,7 +269,7 @@ export default function AdminUserDetailPage() {
                 ) : null}
 
                 {profileType === "company" && Array.isArray(payload.jobs) ? (
-                  <div className="adm-card">
+                  <div className="adm-card" id="adm-sec-jobs">
                     <div className="adm-card-head">
                       <h2>Job posts ({payload.jobs.length})</h2>
                     </div>
@@ -259,7 +297,7 @@ export default function AdminUserDetailPage() {
                   </div>
                 ) : null}
 
-                <div className="adm-card">
+                <div className="adm-card" id="adm-sec-posts">
                   <div className="adm-card-head">
                     <h2>Posts ({posts.length})</h2>
                     <span className="adm-page-sub">View posts · Delete post</span>
@@ -286,11 +324,17 @@ export default function AdminUserDetailPage() {
                             </div>
                             <button
                               type="button"
-                              className="adm-btn adm-btn--danger adm-btn--sm"
+                              className="adm-btn adm-btn--danger adm-btn--sm lc-adm-ic-btn"
                               disabled={deletingPostId === pid}
-                              onClick={() => handleDeletePost(pid)}
+                              onClick={() =>
+                                setPostDeleteTarget({
+                                  pid,
+                                  excerpt: String(p.content || "").slice(0, 140),
+                                })
+                              }
                             >
-                              {deletingPostId === pid ? "…" : "Delete post"}
+                              <Trash2 size={14} strokeWidth={2} aria-hidden />
+                              {deletingPostId === pid ? "…" : "Delete"}
                             </button>
                           </li>
                         );
@@ -303,6 +347,51 @@ export default function AdminUserDetailPage() {
           </div>
         </main>
       </div>
-    </div>
+
+      <Modal
+        open={Boolean(postDeleteTarget)}
+        title="Delete post?"
+        onClose={() => !deletingPostId && setPostDeleteTarget(null)}
+      >
+        {postDeleteTarget ? (
+          <div className="adm-delete-modal">
+            <p>
+              Permanently remove this post?
+              {postDeleteTarget.excerpt ? (
+                <>
+                  {" "}
+                  <em>{postDeleteTarget.excerpt}</em>
+                  {postDeleteTarget.excerpt.length >= 140 ? "…" : ""}
+                </>
+              ) : null}
+            </p>
+            <div className="adm-modal-footer-actions">
+              <button
+                type="button"
+                className="adm-btn adm-btn--ghost"
+                disabled={deletingPostId != null}
+                onClick={() => setPostDeleteTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="adm-btn adm-btn--danger lc-adm-ic-btn"
+                disabled={deletingPostId != null}
+                onClick={() => void confirmDeletePost()}
+              >
+                {deletingPostId != null ? (
+                  <Loader2 className="adm-spin" size={18} strokeWidth={2.5} aria-hidden />
+                ) : (
+                  <>
+                    <Trash2 size={16} strokeWidth={2} aria-hidden /> Delete post
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+    </motion.div>
   );
 }

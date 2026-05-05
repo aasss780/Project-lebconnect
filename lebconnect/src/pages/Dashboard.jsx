@@ -1,12 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import UserAvatar from "../components/UserAvatar";
 import CandidateSidebar from "../components/CandidateSidebar";
-import { formatRelativeTime, initialsFromName } from "../utils/format";
+import { formatRelativeTime } from "../utils/format";
 import { displayNameFromUser } from "../utils/avatar";
 import { getProfileImage, isDisplayableMediaUrl } from "../utils/profileMedia";
-import { dashboardPath, getUser, isLoggedIn, logout } from "../utils/auth";
+import {
+  dashboardPath,
+  FEED_PATH,
+  getUser,
+  isLoggedIn,
+  logout,
+} from "../utils/auth";
 import { useAuthUser } from "../hooks/useAuthUser";
 import {
   commentExtrasKey,
@@ -17,8 +29,43 @@ import {
   toggleFollowInStorage,
 } from "../utils/feedStorage";
 import { hydrateFollowing, toggleFollowViaApi } from "../utils/followApi";
+import { useToast } from "../context/ToastContext";
+import {
+  Flag,
+  ImagePlus,
+  Mail,
+  MessageCircle,
+  Send,
+  Share2,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
+  compressDataUrlForUpload,
+  fileToCompressedDataUrl,
+} from "../utils/imageUpload";
+
+import DashboardRail from "../components/DashboardRail";
+import AppTopbar from "../components/AppTopbar";
+import ReportContentModal from "../components/ReportContentModal";
+import VerifiedCompanyBadge from "../components/VerifiedCompanyBadge";
 import "./Dashboard.css";
 import "./CandidateDashboard.css";
+import { safeUiString } from "../utils/uiString";
+import {
+  FEED_LOGO_CLASSES as LOGO_CLASSES,
+  idsEqual,
+  mapApiPost,
+  viewerNormalizedFieldBucket,
+} from "../utils/feedPostMap";
+import {
+  announceJobOnFeed,
+  buildCreateJobPayload,
+  createCompanyJob,
+  jobIdFromCreateResponse,
+} from "../utils/companyJobApi";
 
 const STATIC_POSTS = [
   {
@@ -42,6 +89,9 @@ const STATIC_POSTS = [
     shareCount: 0,
     authorId: null,
     authorProfileImage: null,
+    authorNormalizedBucket: "",
+    postType: "standard",
+    authorIsVerified: false,
   },
   {
     company: "Phoenix Media Group",
@@ -63,123 +113,18 @@ const STATIC_POSTS = [
     shareCount: 0,
     authorId: null,
     authorProfileImage: null,
+    authorNormalizedBucket: "",
+    postType: "standard",
+    authorIsVerified: false,
   },
 ];
-
-const LOGO_CLASSES = ["tb-logo", "pm-logo"];
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
-}
-
-function idsEqual(a, b) {
-  if (a === null || a === undefined || b === null || b === undefined) return false;
-  if (a === "" || b === "") return false;
-  return String(a) === String(b);
-}
-
-function ComposerPostSendIcon() {
-  return (
-    <svg
-      className="composer-post-send-icon"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      aria-hidden
-      focusable="false"
-    >
-      <path
-        fill="currentColor"
-        d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"
-      />
-    </svg>
-  );
-}
-
-function mapComment(c) {
-  const u = c.user || {};
-  const who = u.companyName || u.fullName || "Member";
-  const avatarRaw = getProfileImage(u);
-  return {
-    id: c._id ?? c.id,
-    text: c.text,
-    who,
-    time: formatRelativeTime(c.createdAt),
-    userId: u.id ?? u._id,
-    role: u.role,
-    avatar: isDisplayableMediaUrl(avatarRaw) ? avatarRaw : null,
-  };
-}
-
-function mapApiPost(p, idx, currentUserId) {
-  const a = p.author || {};
-  const name = a.companyName || a.fullName || "Member";
-  const label = a.role === "company" ? "Company" : "Candidate";
-  const subtitle = [a.industry || a.specialization, a.location]
-    .filter(Boolean)
-    .join(" · ");
-  const liked =
-    Array.isArray(p.likes) &&
-    p.likes.some((x) =>
-      idsEqual(currentUserId, x.id ?? x._id)
-    );
-
-  const rawImg = p.image;
-  const image =
-    rawImg != null && String(rawImg).trim() !== "" ? String(rawImg).trim() : null;
-
-  const authorIdRaw = a.id ?? a._id;
-  const authorId =
-    authorIdRaw != null && authorIdRaw !== "" ? authorIdRaw : null;
-  const authorRole =
-    typeof a.role === "string" ? String(a.role).toLowerCase() : "";
-  const pi = getProfileImage(a);
-  const authorProfileImage = isDisplayableMediaUrl(pi) ? pi : null;
-
-  const badgeSubtitle =
-    a.role === "company"
-      ? a.industry || a.companyName || "Organization"
-      : a.specialization || a.email || subtitle || "Professional";
-
-  return {
-    company: name,
-    label,
-    authorRole,
-    subtitle: subtitle || "LebConnect member",
-    badgeSubtitle,
-    time: `${formatRelativeTime(p.createdAt)} · 🌐`,
-    text1: p.content || "",
-    text2: "",
-    hashtags: "",
-    image,
-    logo: initialsFromName(name).slice(0, 2),
-    logoClass: LOGO_CLASSES[idx % LOGO_CLASSES.length],
-    postId: p.id ?? p._id,
-    likesCount: Array.isArray(p.likes) ? p.likes.length : 0,
-    liked,
-    commentsCount: Array.isArray(p.comments) ? p.comments.length : 0,
-    comments: Array.isArray(p.comments) ? p.comments.map(mapComment) : [],
-    shareCount: Number(p.shareCount ?? 0),
-    authorId,
-    authorProfileImage,
-    postType: String(p.postType ?? p.post_type ?? "standard").toLowerCase(),
-    jobId: p.jobId ?? p.job_id ?? null,
-    linkedJobTitle: p.linkedJobTitle ?? p.linked_job_title ?? null,
-    linkedJobLocation: p.linkedJobLocation ?? p.linked_job_location ?? null,
-    linkedJobType: p.linkedJobType ?? p.linked_job_type ?? null,
-    linkedJobSalary: p.linkedJobSalary ?? p.linked_job_salary ?? null,
-  };
-}
 
 const FEED_FILTER_OPTIONS = [
   { id: "all", label: "All Posts" },
   { id: "following", label: "Following" },
   { id: "samefield", label: "Same Field" },
+  { id: "jobsforyou", label: "Jobs For You" },
+  { id: "companieshiring", label: "Companies Hiring" },
   { id: "people", label: "People" },
   { id: "companies", label: "Companies" },
 ];
@@ -196,12 +141,22 @@ function defaultExtra() {
 function Dashboard() {
   const navigate = useNavigate();
   const composerFileRef = useRef(null);
-  const user = useAuthUser();
-  const displayName = displayNameFromUser(user);
+  const commentAreaRefs = useRef({});
+  const hookUser = useAuthUser();
+  const sessionUserRaw = getUser();
+  const sessionUser =
+    sessionUserRaw && typeof sessionUserRaw === "object" ? sessionUserRaw : {};
+  /** Prefer hook user; fallback to stored session so first paint never treats role as missing. */
+  const currentUser =
+    hookUser && typeof hookUser === "object" ? hookUser : sessionUser;
+  const user = currentUser;
+  const currentRole = String(currentUser?.role || "").trim().toLowerCase();
+  console.log("Dashboard feed render", { currentUser, currentRole });
+  const roleLower = currentRole;
   const roleLabel =
-    user?.role === "company"
+    roleLower === "company"
       ? "Company"
-      : user?.role === "admin"
+      : roleLower === "admin"
         ? "Admin"
         : "Candidate";
 
@@ -241,8 +196,15 @@ function Dashboard() {
   const [sendText, setSendText] = useState("");
   const [topSearch, setTopSearch] = useState("");
   const [messagesUnread, setMessagesUnread] = useState(0);
+  const [reportTarget, setReportTarget] = useState(null);
+  const [postsError, setPostsError] = useState("");
 
-  const uid = user?.id ?? user?._id;
+  const uid = user?.id ?? user?._id ?? null;
+  const toast = useToast();
+
+  const [railNetworkBlock, setRailNetworkBlock] = useState(null);
+  const [railNetworkFailed, setRailNetworkFailed] = useState(false);
+  const [railFollowBusyUserId, setRailFollowBusyUserId] = useState(null);
 
   useEffect(() => {
     saveCommentExtrasFlat(commentExtras);
@@ -268,8 +230,39 @@ function Dashboard() {
     };
   }, [uid]);
 
+  useEffect(() => {
+    if (!uid) {
+      setRailNetworkBlock(null);
+      setRailNetworkFailed(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const nwRes = await api.get("/api/network/same-field").then(
+          (r) => ({ ok: true, data: r.data }),
+          () => ({ ok: false, data: null })
+        );
+        if (cancelled) return;
+        setRailNetworkFailed(!nwRes.ok);
+        setRailNetworkBlock(
+          nwRes.ok && nwRes.data && typeof nwRes.data === "object" ? nwRes.data : null
+        );
+      } catch {
+        if (!cancelled) {
+          setRailNetworkBlock(null);
+          setRailNetworkFailed(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uid]);
+
   const loadPosts = useCallback(async () => {
     setLoading(true);
+    setPostsError("");
     try {
       const q =
         feedFilter === "all" ? "" : `?filter=${encodeURIComponent(feedFilter)}`;
@@ -279,13 +272,35 @@ function Dashboard() {
         if (data.length === 0) {
           setPosts([]);
         } else {
-          setPosts(data.map((p, i) => mapApiPost(p, i, uid)));
+          const mapped = [];
+          for (let i = 0; i < data.length; i++) {
+            try {
+              const row = mapApiPost(data[i], i, uid);
+              if (row) mapped.push(row);
+            } catch {
+              /* skip bad row */
+            }
+          }
+          setPosts(mapped);
         }
       } else {
         setPosts([]);
         setLiveFeed(true);
       }
-    } catch {
+    } catch (error) {
+      console.error("Feed load failed", error.response?.data || error.message);
+      const msg =
+        error?.response?.data?.message ??
+        error?.response?.data ??
+        error?.message ??
+        "";
+      const line =
+        typeof msg === "string"
+          ? msg
+          : msg && typeof msg === "object"
+            ? JSON.stringify(msg)
+            : "Could not load posts.";
+      setPostsError(line);
       setPosts(STATIC_POSTS);
       setLiveFeed(false);
     } finally {
@@ -293,9 +308,97 @@ function Dashboard() {
     }
   }, [feedFilter, uid]);
 
+  const followedSetSafe = useMemo(() => {
+    if (followedSet instanceof Set) return followedSet;
+    console.error(
+      "[Dashboard] followedUsers was not a Set — ignoring stored follow IDs for this render."
+    );
+    return new Set();
+  }, [followedSet]);
+
+  const railPeople = useMemo(() => {
+    const raw = railNetworkBlock?.people;
+    if (!Array.isArray(raw)) return [];
+    const myId = uid != null ? String(uid) : "";
+    return raw.filter(
+      (p) =>
+        p &&
+        p.id != null &&
+        String(p.id) !== myId &&
+        Number(p.id) !== Number(myId)
+    );
+  }, [railNetworkBlock, uid]);
+
+  const railCompanies = useMemo(() => {
+    const raw = railNetworkBlock?.companies;
+    return Array.isArray(raw) ? raw : [];
+  }, [railNetworkBlock]);
+
+  const handleRailTopicClick = useCallback((tag) => {
+    const chunk = typeof tag === "string" ? tag : "";
+    if (!chunk.trim()) return;
+    setComposer((prev) => {
+      const p = prev || "";
+      const needsSpace = p.length > 0 && !/\s$/.test(p);
+      return `${p}${needsSpace ? " " : ""}${chunk.trim()}`;
+    });
+  }, []);
+
+  const toggleRailFollowPerson = useCallback(
+    async (e, personId) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      const id = Number(personId);
+      if (!Number.isFinite(id) || id === Number(uid)) return;
+      if (railFollowBusyUserId != null) return;
+      const sid = String(id);
+      const has = followedSetSafe.has(sid);
+      setRailFollowBusyUserId(id);
+      try {
+        const next = await toggleFollowViaApi(id, has);
+        if (next) setFollowedSet(next);
+      } catch {
+        toast.error("Could not update follow.");
+      } finally {
+        setRailFollowBusyUserId(null);
+      }
+    },
+    [uid, railFollowBusyUserId, followedSetSafe, toast]
+  );
+
+  const feedRailContext = useMemo(
+    () => ({
+      people: railPeople,
+      companies: railCompanies,
+      specialization: String(user?.specialization || "").trim(),
+      followedSet: followedSetSafe,
+      followBusyUserId: railFollowBusyUserId,
+      toggleFollowPerson: toggleRailFollowPerson,
+      networkFailed: railNetworkFailed,
+      onTopicClick: handleRailTopicClick,
+    }),
+    [
+      railPeople,
+      railCompanies,
+      user,
+      followedSetSafe,
+      railFollowBusyUserId,
+      toggleRailFollowPerson,
+      railNetworkFailed,
+      handleRailTopicClick,
+    ]
+  );
+
+  const safePosts = useMemo(
+    () => (Array.isArray(posts) ? posts : []),
+    [posts]
+  );
+
   const filteredPosts = useMemo(() => {
-    if (liveFeed) return posts;
-    return posts.filter((post) => {
+    if (liveFeed) return safePosts;
+    return safePosts.filter((post) => {
       if (feedFilter === "all") return true;
       const aid =
         post.authorId != null && post.authorId !== ""
@@ -304,17 +407,60 @@ function Dashboard() {
       const role = (post.authorRole || "").toLowerCase();
       if (feedFilter === "following") {
         if (!aid) return false;
-        return followedSet.has(aid);
+        return followedSetSafe.has(aid);
       }
-      if (feedFilter === "samefield") return false;
+      if (feedFilter === "samefield") {
+        const vb = viewerNormalizedFieldBucket(user);
+        if (!vb) return true;
+        const pb = post.authorNormalizedBucket || "";
+        if (!pb) return true;
+        return pb === vb;
+      }
       if (feedFilter === "people") {
         if (!aid) return false;
         return role !== "company";
       }
       if (feedFilter === "companies") return role === "company";
+      if (feedFilter === "jobsforyou") {
+        if (post.postType !== "job") return false;
+        const vb = viewerNormalizedFieldBucket(user);
+        const pb = post.authorNormalizedBucket || "";
+        return !vb || !pb ? true : vb === pb;
+      }
+      if (feedFilter === "companieshiring") return role === "company";
       return true;
     });
-  }, [posts, feedFilter, followedSet, liveFeed]);
+  }, [safePosts, feedFilter, followedSetSafe, liveFeed, user]);
+
+  const emptyFeedHint = useMemo(() => {
+    if (feedFilter === "following") {
+      return "Follow colleagues and employers from posts — then open Following to see only their updates.";
+    }
+    if (feedFilter === "samefield") {
+      return "We could not match specialization or industry buckets for every account. Try All Posts or update your profile so Same Field has more signal.";
+    }
+    if (feedFilter === "people") {
+      return "No candidate or member-authored posts matched this filter.";
+    }
+    if (feedFilter === "companies") {
+      return "No posts from organizations matched this filter yet.";
+    }
+    if (feedFilter === "jobsforyou") {
+      return "Job posts tailored to your field will appear — try Same Field or All Posts.";
+    }
+    if (feedFilter === "companieshiring") {
+      return "Follow companies hiring in your space — widen to All Posts for more signal.";
+    }
+    return liveFeed
+      ? "The feed has no visible posts yet. Be the first to share an update."
+      : "Showing sample posts while the feed API is offline.";
+  }, [feedFilter, liveFeed]);
+
+  const composerPreviewSrc =
+    composerImage ||
+    (composerImageUrl.trim() && isDisplayableMediaUrl(composerImageUrl.trim())
+      ? composerImageUrl.trim()
+      : "");
 
   const patchCommentExtra = (postId, commentId, fn) => {
     const k = commentExtrasKey(postId, commentId);
@@ -328,7 +474,7 @@ function Dashboard() {
   const toggleFollowAuthor = async (authorId) => {
     if (authorId == null || authorId === "") return;
     const sid = String(authorId);
-    const has = followedSet.has(sid);
+    const has = followedSetSafe.has(sid);
     if (!isLoggedIn()) {
       setFollowedSet(toggleFollowInStorage(authorId));
       return;
@@ -346,7 +492,7 @@ function Dashboard() {
   };
 
   const isFollowingAuthor = (authorId) =>
-    authorId != null && followedSet.has(String(authorId));
+    authorId != null && followedSetSafe.has(String(authorId));
 
   const handleCommentVote = (postId, commentId, kind) => {
     patchCommentExtra(postId, commentId, (e) => {
@@ -417,7 +563,7 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (user?.role !== "candidate" || !isLoggedIn()) {
+    if (roleLower !== "candidate" || !isLoggedIn()) {
       setAppliedJobIds(new Set());
       return;
     }
@@ -440,7 +586,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [uid, user?.role]);
+  }, [uid, roleLower]);
 
   useEffect(() => {
     let cancelled = false;
@@ -467,12 +613,9 @@ function Dashboard() {
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
-    const imgPayload =
-      (composerImage && String(composerImage).trim()) ||
-      composerImageUrl.trim();
 
     const isCompanyJobComposer =
-      user?.role === "company" && composerMode === "job";
+      roleLower === "company" && composerMode === "job";
 
     if (isCompanyJobComposer) {
       if (!jobDraft.title.trim() || !jobDraft.description.trim()) {
@@ -480,7 +623,12 @@ function Dashboard() {
         return;
       }
     } else {
-      const hasMedia = Boolean(imgPayload);
+      const hasMedia =
+        Boolean(composerImage && String(composerImage).trim()) ||
+        Boolean(
+          composerImageUrl.trim() &&
+            isDisplayableMediaUrl(composerImageUrl.trim())
+        );
       if (!composer.trim() && !hasMedia) {
         setFeedNotice("Write something or add a photo.");
         return;
@@ -491,33 +639,45 @@ function Dashboard() {
     setFeedNotice("");
 
     try {
+      let imgPayloadPrep =
+        (composerImage && String(composerImage).trim()) ||
+        composerImageUrl.trim();
+      imgPayloadPrep = await prepareImagePayload(imgPayloadPrep);
+      const approxImgBytes =
+        imgPayloadPrep.length > 0
+          ? Math.ceil((imgPayloadPrep.length * 3) / 4)
+          : 0;
+      if (approxImgBytes > SAFE_IMAGE_FILE_BYTES + 2048) {
+        setFeedNotice(
+          "Image is still too large after compression. Choose a smaller file or lower resolution."
+        );
+        setPosting(false);
+        return;
+      }
+
       if (isCompanyJobComposer) {
-        const requirements = jobDraft.requirements
-          .split(/[\n,]+/)
-          .map((s) => s.trim())
-          .filter(Boolean);
-        const { data: created } = await api.post("/api/jobs", {
-          title: jobDraft.title.trim(),
-          description: jobDraft.description.trim(),
-          location: jobDraft.location.trim(),
-          type: jobDraft.type.trim(),
-          salary: jobDraft.salary.trim(),
-          requirements,
+        const payload = buildCreateJobPayload({
+          title: jobDraft.title,
+          description: jobDraft.description,
+          location: jobDraft.location,
+          type: jobDraft.type,
+          salary: jobDraft.salary,
+          requirements: jobDraft.requirements,
         });
-        const jobId =
-          created?.job?.id ?? created?.job?._id ?? created?.id ?? created?._id;
-        if (jobId == null || !Number.isFinite(Number(jobId))) {
+        const created = await createCompanyJob(api, payload);
+        const jobIdRaw = jobIdFromCreateResponse(created);
+        if (jobIdRaw == null || !Number.isFinite(Number(jobIdRaw))) {
           setFeedNotice(
             "Job was created but the response was unexpected. Refresh the feed and try posting again if needed."
           );
           await loadPosts();
           return;
         }
-        const announce = `We are hiring: ${jobDraft.title.trim()}`;
-        await api.post("/api/posts", {
-          content: announce,
-          ...(imgPayload ? { image: imgPayload } : {}),
-          ...(jobId != null ? { jobId } : {}),
+        const jobId = Number(jobIdRaw);
+        await announceJobOnFeed(api, {
+          jobId,
+          title: jobDraft.title.trim(),
+          image: imgPayloadPrep || undefined,
         });
         setJobDraft({
           title: "",
@@ -530,10 +690,10 @@ function Dashboard() {
         setComposerMode("post");
       } else {
         const content =
-          composer.trim() || (imgPayload ? " " : composer.trim());
+          composer.trim() || (imgPayloadPrep ? " " : composer.trim());
         await api.post("/api/posts", {
           content,
-          ...(imgPayload ? { image: imgPayload } : {}),
+          ...(imgPayloadPrep ? { image: imgPayloadPrep } : {}),
         });
       }
 
@@ -563,13 +723,23 @@ function Dashboard() {
       return;
     }
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await fileToCompressedDataUrl(file, 1600, 0.85);
       setComposerImage(dataUrl);
+      setComposerImageUrl("");
+      setFeedNotice("");
     } catch {
       setFeedNotice("Could not read that image.");
     } finally {
       if (composerFileRef.current) composerFileRef.current.value = "";
     }
+  };
+
+  const prepareImagePayload = async (img) => {
+    if (!img || !String(img).trim()) return "";
+    const t = String(img).trim();
+    if (/^data:image\//i.test(t))
+      return compressDataUrlForUpload(t);
+    return t;
   };
 
   const handleLike = async (post, idx) => {
@@ -579,13 +749,14 @@ function Dashboard() {
       const refreshed = data?.post;
       if (refreshed) {
         const mapped = mapApiPost(refreshed, idx, uid);
-        setPosts((prev) =>
-          prev.map((p) =>
-            p.postId === post.postId
-              ? { ...mapped, logoClass: LOGO_CLASSES[idx % LOGO_CLASSES.length] }
-              : p
-          )
-        );
+        const mappedSafe = mapped
+          ? { ...mapped, logoClass: LOGO_CLASSES[idx % LOGO_CLASSES.length] }
+          : null;
+        if (mappedSafe) {
+          setPosts((prev) =>
+            prev.map((p) => (p.postId === post.postId ? mappedSafe : p))
+          );
+        }
       } else {
         await loadPosts();
       }
@@ -621,27 +792,44 @@ function Dashboard() {
 
   const openSend = (post) => {
     setSendTarget(post);
-    setSendReceiver("");
+    setSendReceiver(
+      post.authorId != null && post.authorId !== ""
+        ? String(post.authorId)
+        : ""
+    );
     setSendText("");
+    setFeedNotice("");
   };
 
   const submitSend = async () => {
     if (!sendTarget) return;
-    if (!sendReceiver.trim() || !sendText.trim()) {
-      setFeedNotice("Enter receiver and message first.");
+    const receiverId = Number(String(sendReceiver).trim());
+    const text = sendText.trim();
+    if (!Number.isFinite(receiverId) || receiverId <= 0) {
+      setFeedNotice(
+        "Could not resolve the author's account to message. Open their profile from the feed and try again."
+      );
+      return;
+    }
+    if (!text) {
+      setFeedNotice("Write a short message.");
       return;
     }
     try {
       await api.post("/api/messages", {
-        to: sendReceiver.trim(),
-        message: sendText.trim(),
-        postId: sendTarget.postId,
+        receiver: receiverId,
+        text,
       });
       setFeedNotice("Message sent.");
       setSendTarget(null);
-    } catch {
-      setFeedNotice("Message feature coming soon.");
-      setSendTarget(null);
+      setSendReceiver("");
+      setSendText("");
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Could not send message.";
+      setFeedNotice(msg);
     }
   };
 
@@ -672,10 +860,27 @@ function Dashboard() {
 
   const toggleComments = (postId) => {
     if (!postId) return;
-    setExpandedComments((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }));
+    setExpandedComments((prev) => {
+      const opening = !prev[postId];
+      if (opening) {
+        queueMicrotask(() => {
+          commentAreaRefs.current[String(postId)]?.focus?.();
+        });
+      }
+      return { ...prev, [postId]: opening };
+    });
+  };
+
+  const goUserProfileFromIds = (userId, role) => {
+    if (userId == null || userId === "") return;
+    const rid = Number(String(userId).trim());
+    if (!Number.isFinite(rid) || rid <= 0) return;
+    const r = String(role || "").toLowerCase();
+    if (r === "company") {
+      navigate(`/company-profile/${rid}`);
+      return;
+    }
+    navigate(`/candidate-profile/${rid}`);
   };
 
   const goAuthorProfile = (post) => {
@@ -691,7 +896,7 @@ function Dashboard() {
 
   const canDelete = (post) => {
     if (!post.postId) return false;
-    if (user?.role === "admin") return true;
+    if (roleLower === "admin") return true;
     return post.authorId != null && idsEqual(uid, post.authorId);
   };
 
@@ -706,7 +911,7 @@ function Dashboard() {
   };
 
   const goRoleHome = () => {
-    if (user?.role) navigate(dashboardPath(user.role));
+    if (roleLower) navigate(dashboardPath(user.role));
     else navigate("/");
   };
 
@@ -718,11 +923,11 @@ function Dashboard() {
       goRoleHome();
       return;
     }
-    if (user?.role === "candidate") {
+    if (roleLower === "candidate") {
       navigate("/candidate-dashboard", { state: { tab: "findJobs", q } });
       return;
     }
-    if (user?.role) {
+    if (roleLower) {
       navigate(`${dashboardPath(user.role)}?q=${encodeURIComponent(q)}`);
       return;
     }
@@ -734,12 +939,10 @@ function Dashboard() {
     return commentExtras[k] || defaultExtra();
   };
 
-  const headerNameCompany = displayNameFromUser(user) || displayName;
-
   const companyNav = {
     onDashboard: () =>
       navigate("/company-dashboard", { state: { tab: "dashboard" } }),
-    onFeed: () => navigate("/dashboard"),
+    onFeed: () => navigate(FEED_PATH),
     onMyJobs: () =>
       navigate("/company-dashboard", { state: { tab: "jobs" } }),
     onApplicants: () =>
@@ -753,7 +956,8 @@ function Dashboard() {
   };
 
   const feedMainEl = (
-    <main className="feed-content">
+    <main className="feed-content feed-content--split">
+          <div className="feed-center-stack">
           <div className="feed-filter-bar">
             <div className="filter-left">
               <span className="sort-label">Show:</span>
@@ -775,15 +979,22 @@ function Dashboard() {
           </div>
           {feedNotice ? (
             <div
-              className={`feed-notice ${feedNotice.toLowerCase().includes("posted successfully") ? "feed-notice--ok" : ""}`}
+              className={`feed-notice ${/success|posted|sent|shared/i.test(feedNotice) && !/could not|fail|error|too large|invalid|unexpected/i.test(feedNotice) ? "feed-notice--ok" : ""}`}
               role="status"
             >
               {feedNotice}
             </div>
           ) : null}
 
+          {postsError ? (
+            <div className="feed-notice" role="alert">
+              Feed could not refresh: {safeUiString(postsError, "Unknown error")}.
+              Sample posts are shown below until the server is available.
+            </div>
+          ) : null}
+
           <form className="composer-card" onSubmit={handleCreatePost}>
-            {user?.role === "company" ? (
+            {roleLower === "company" ? (
               <div className="composer-mode-toggle">
                 <button
                   type="button"
@@ -808,7 +1019,7 @@ function Dashboard() {
               </div>
             ) : null}
 
-            {composerMode === "job" && user?.role === "company" ? (
+            {composerMode === "job" && roleLower === "company" ? (
               <div className="composer-job-card">
                 <h3 className="composer-job-card-title">Create Job Post</h3>
                 <div className="composer-job-grid">
@@ -898,7 +1109,8 @@ function Dashboard() {
                     className="composer-job-inline-photo-btn"
                     onClick={() => composerFileRef.current?.click()}
                   >
-                    📷 Add optional photo to announcement
+                    <ImagePlus size={18} strokeWidth={2} aria-hidden />
+                    Add optional photo
                   </button>
                   <details className="composer-job-url-mini">
                     <summary>Image URL</summary>
@@ -912,16 +1124,19 @@ function Dashboard() {
                   </details>
                 </div>
 
-                {composerImage ? (
+                {composerPreviewSrc ? (
                   <div className="composer-preview-wrap composer-job-inner-preview">
-                    <img src={composerImage} alt="" />
+                    <img src={composerPreviewSrc} alt="" />
                     <button
                       type="button"
                       className="composer-preview-remove"
                       aria-label="Remove image"
-                      onClick={() => setComposerImage(null)}
+                      onClick={() => {
+                        setComposerImage(null);
+                        setComposerImageUrl("");
+                      }}
                     >
-                      ×
+                      <X size={18} strokeWidth={2} aria-hidden />
                     </button>
                   </div>
                 ) : null}
@@ -956,7 +1171,7 @@ function Dashboard() {
                       !(jobDraft.title.trim() && jobDraft.description.trim())
                     }
                   >
-                    <ComposerPostSendIcon />
+                    <Send size={18} strokeWidth={2} aria-hidden />
                     {posting ? "Posting..." : "Post Job"}
                   </button>
                 </div>
@@ -986,16 +1201,19 @@ function Dashboard() {
                   ))}
                 </div>
 
-                {composerImage ? (
+                {composerPreviewSrc ? (
                   <div className="composer-preview-wrap">
-                    <img src={composerImage} alt="" />
+                    <img src={composerPreviewSrc} alt="" />
                     <button
                       type="button"
                       className="composer-preview-remove"
                       aria-label="Remove image"
-                      onClick={() => setComposerImage(null)}
+                      onClick={() => {
+                        setComposerImage(null);
+                        setComposerImageUrl("");
+                      }}
                     >
-                      ×
+                      <X size={18} strokeWidth={2} aria-hidden />
                     </button>
                   </div>
                 ) : null}
@@ -1015,7 +1233,8 @@ function Dashboard() {
                     className="composer-photo-btn"
                     onClick={() => composerFileRef.current?.click()}
                   >
-                    📷 Add photo
+                    <ImagePlus size={18} strokeWidth={2} aria-hidden />
+                    Add Photo
                   </button>
 
                   <details className="composer-url-details">
@@ -1037,11 +1256,12 @@ function Dashboard() {
                       !(
                         composer.trim() ||
                         (composerImage && String(composerImage).trim()) ||
-                        composerImageUrl.trim()
+                        (composerImageUrl.trim() &&
+                          isDisplayableMediaUrl(composerImageUrl.trim()))
                       )
                     }
                   >
-                    <ComposerPostSendIcon />
+                    <Send size={18} strokeWidth={2} aria-hidden />
                     {posting ? "Posting..." : "Post"}
                   </button>
                 </div>
@@ -1054,9 +1274,49 @@ function Dashboard() {
           )}
 
           {!loading &&
-            filteredPosts.map((post, idx) => {
+            (filteredPosts.length === 0 ? (
+              <div className="lc-empty-state lc-feed-empty">
+                <strong>No posts yet</strong>
+                <span>{emptyFeedHint}</span>
+                <div className="lc-feed-empty-actions">
+                  <button
+                    type="button"
+                    className="lc-btn lc-btn--primary lc-btn-hit"
+                    onClick={() => setFeedFilter("all")}
+                  >
+                    All Posts
+                  </button>
+                  {roleLower === "candidate" ? (
+                    <button
+                      type="button"
+                      className="lc-btn lc-btn--secondary lc-btn-hit"
+                      onClick={() =>
+                        navigate("/candidate-dashboard", {
+                          state: { tab: "findJobs" },
+                        })
+                      }
+                    >
+                      Find jobs
+                    </button>
+                  ) : roleLower === "company" ? (
+                    <button
+                      type="button"
+                      className="lc-btn lc-btn--secondary lc-btn-hit"
+                      onClick={() =>
+                        navigate("/company-dashboard", { state: { tab: "jobs" } })
+                      }
+                    >
+                      My Jobs
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              filteredPosts
+                .filter((post) => post && typeof post === "object")
+                .map((post, idx) => {
               const origIdx =
-                posts.findIndex(
+                safePosts.findIndex(
                   (p) =>
                     p.postId !== null &&
                     post.postId !== null &&
@@ -1086,6 +1346,9 @@ function Dashboard() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="post-title-row">
                       <h3>{post.company}</h3>
+                      {post.authorRole === "company" && post.authorIsVerified ? (
+                        <VerifiedCompanyBadge />
+                      ) : null}
                       <span className={`company-chip ${chipTone}`}>{post.label}</span>
                     </div>
                     <p className="post-subtitle">{post.subtitle}</p>
@@ -1097,7 +1360,7 @@ function Dashboard() {
 
               return (
                 <div
-                  className="post-card"
+                  className="post-card lc-post-card-motion"
                   key={post.postId ?? `${post.company}-${post.time}-${idx}`}
                 >
                   <div className="post-header">
@@ -1139,15 +1402,29 @@ function Dashboard() {
                         <button
                           type="button"
                           className="post-more"
-                          title="Delete"
+                          title="Delete post"
                           onClick={() => handleDelete(post)}
                         >
-                          🗑
+                          <Trash2 size={18} strokeWidth={2} aria-hidden />
                         </button>
                       ) : null}
-                      <button type="button" className="post-more">
-                        ⋮
-                      </button>
+                      {isLoggedIn() &&
+                      post.postId != null &&
+                      !canDelete(post) ? (
+                        <button
+                          type="button"
+                          className="post-more"
+                          title="Report this post"
+                          onClick={() =>
+                            setReportTarget({
+                              type: "post",
+                              id: Number(post.postId),
+                            })
+                          }
+                        >
+                          <Flag size={18} strokeWidth={2} aria-hidden />
+                        </button>
+                      ) : null}
                     </div>
                   </div>
 
@@ -1159,8 +1436,7 @@ function Dashboard() {
                     ) : null}
                   </div>
 
-                  {post.postType === "job" &&
-                  post.jobId &&
+                  {post.jobId != null &&
                   Number.isFinite(Number(post.jobId)) ? (
                     <div className="feed-job-snippet-card">
                       <span className="feed-job-snippet-badge" aria-hidden>
@@ -1190,8 +1466,8 @@ function Dashboard() {
                           </ul>
                         ) : null}
                         <div className="feed-job-snippet-actions">
-                          {user?.role === "company" &&
-                          idsEqual(uid, post.authorId) ? (
+                          {idsEqual(uid, post.authorId) &&
+                          roleLower === "company" ? (
                             <>
                               <button
                                 type="button"
@@ -1219,26 +1495,45 @@ function Dashboard() {
                                 View applicants
                               </button>
                             </>
-                          ) : null}
-                          {user?.role === "candidate" ? (
-                            appliedJobIds.has(Number(post.jobId)) ? (
-                              <span className="feed-job-applied">Applied</span>
-                            ) : (
+                          ) : (
+                            <>
                               <button
                                 type="button"
-                                className="feed-job-action-btn primary"
+                                className="feed-job-action-btn ghost"
                                 onClick={() =>
                                   navigate("/candidate-dashboard", {
                                     state: {
+                                      tab: "findJobs",
                                       openApplyJobId: Number(post.jobId),
                                     },
                                   })
                                 }
                               >
-                                Apply
+                                View Job
                               </button>
-                            )
-                          ) : null}
+                              {roleLower === "candidate" ? (
+                                appliedJobIds.has(Number(post.jobId)) ? (
+                                  <span className="feed-job-applied">
+                                    Applied
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="feed-job-action-btn primary"
+                                    onClick={() =>
+                                      navigate("/candidate-dashboard", {
+                                        state: {
+                                          openApplyJobId: Number(post.jobId),
+                                        },
+                                      })
+                                    }
+                                  >
+                                    Apply
+                                  </button>
+                                )
+                              ) : null}
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1276,20 +1571,44 @@ function Dashboard() {
                       className={post.liked ? "lc-post-like--active" : ""}
                       onClick={() => handleLike(post, likeIdx)}
                     >
-                      👍 Like
+                      <ThumbsUp
+                        size={18}
+                        strokeWidth={2}
+                        className="lc-post-act-icon"
+                        aria-hidden
+                      />
+                      Like
                       {post.likesCount != null ? ` (${post.likesCount})` : ""}
                     </button>
                     <button type="button" onClick={() => toggleComments(post.postId)}>
-                      💬 Comment
+                      <MessageCircle
+                        size={18}
+                        strokeWidth={2}
+                        className="lc-post-act-icon"
+                        aria-hidden
+                      />
+                      Comment
                       {post.commentsCount != null
                         ? ` (${post.commentsCount})`
                         : ""}
                     </button>
                     <button type="button" onClick={() => handleShare(post)}>
-                      ↗ Share
+                      <Share2
+                        size={18}
+                        strokeWidth={2}
+                        className="lc-post-act-icon"
+                        aria-hidden
+                      />
+                      Share
                     </button>
                     <button type="button" onClick={() => openSend(post)}>
-                      ✉ Send
+                      <Mail
+                        size={18}
+                        strokeWidth={2}
+                        className="lc-post-act-icon"
+                        aria-hidden
+                      />
+                      Send
                     </button>
                   </div>
 
@@ -1297,12 +1616,13 @@ function Dashboard() {
                     <div className="lc-comment-shell">
                       <div className="lc-comment-intro">Comments</div>
                       <div className="lc-comment-list">
-                        {(post.comments || []).length === 0 ? (
+                        {(Array.isArray(post.comments) ? post.comments : [])
+                          .length === 0 ? (
                           <p className="lc-comment-time">
                             No comments yet. Be the first to comment.
                           </p>
                         ) : (
-                          (post.comments || []).map((c) => {
+                          (Array.isArray(post.comments) ? post.comments : []).map((c) => {
                             const cid = String(c.id);
                             const merged = mergedExtraFor(post.postId, cid);
                             const rk = `${String(post.postId)}::${cid}`;
@@ -1312,17 +1632,32 @@ function Dashboard() {
 
                             return (
                               <div className="lc-comment-row" key={cid}>
-                                <div className="lc-comment-avatar-slot">
+                                <button
+                                  type="button"
+                                  className="lc-comment-avatar-hit"
+                                  onClick={() =>
+                                    goUserProfileFromIds(c.userId, c.role)
+                                  }
+                                  aria-label={`Open profile: ${c.who}`}
+                                >
                                   <UserAvatar
                                     user={null}
                                     name={c.who}
                                     src={c.avatar}
                                     size={40}
                                   />
-                                </div>
+                                </button>
                                 <div className="lc-comment-bubble">
                                   <div className="lc-comment-meta">
-                                    <strong>{c.who}</strong>
+                                    <button
+                                      type="button"
+                                      className="lc-comment-name-hit"
+                                      onClick={() =>
+                                        goUserProfileFromIds(c.userId, c.role)
+                                      }
+                                    >
+                                      <strong>{c.who}</strong>
+                                    </button>
                                     <span className="lc-comment-time">
                                       {c.time}
                                     </span>
@@ -1341,7 +1676,12 @@ function Dashboard() {
                                         handleCommentVote(post.postId, cid, "like")
                                       }
                                     >
-                                      👍 Like ({merged.likes || 0})
+                                      <ThumbsUp
+                                        size={16}
+                                        strokeWidth={2}
+                                        aria-hidden
+                                      />
+                                      {merged.likes || 0}
                                     </button>
                                     <button
                                       type="button"
@@ -1358,7 +1698,12 @@ function Dashboard() {
                                         )
                                       }
                                     >
-                                      👎 Dislike ({merged.dislikes || 0})
+                                      <ThumbsDown
+                                        size={16}
+                                        strokeWidth={2}
+                                        aria-hidden
+                                      />
+                                      {merged.dislikes || 0}
                                     </button>
                                     <button
                                       type="button"
@@ -1439,6 +1784,11 @@ function Dashboard() {
 
                       <div className="lc-comment-composer">
                         <textarea
+                          ref={(el) => {
+                            if (post.postId != null) {
+                              commentAreaRefs.current[String(post.postId)] = el;
+                            }
+                          }}
                           placeholder="Share your thoughts..."
                           rows={2}
                           value={commentDrafts[post.postId] || ""}
@@ -1461,32 +1811,97 @@ function Dashboard() {
                   ) : null}
                 </div>
               );
-            })}
+            })
+          ))}
+          </div>
+
+          <DashboardRail variant="feed" context={feedRailContext} />
     </main>
   );
+
+  const reportModalJsx = (
+    <ReportContentModal
+      open={reportTarget != null}
+      onClose={() => setReportTarget(null)}
+      targetType={
+        reportTarget && typeof reportTarget === "object" && reportTarget.type
+          ? reportTarget.type
+          : "post"
+      }
+      targetId={
+        reportTarget && typeof reportTarget === "object"
+          ? reportTarget.id
+          : null
+      }
+      title="Report this post"
+    />
+  );
+
+  const sendReceiverLocked =
+    sendTarget &&
+    sendTarget.authorId != null &&
+    sendTarget.authorId !== "";
 
   const sendModalJsx =
     sendTarget ? (
       <div className="feed-send-modal-backdrop">
-        <div className="feed-send-modal">
-          <h3>Send Post</h3>
+        <div className="feed-send-modal lc-glass-card" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            className="feed-send-modal-dismiss"
+            aria-label="Close"
+            onClick={() => setSendTarget(null)}
+          >
+            <X size={22} strokeWidth={2} aria-hidden />
+          </button>
+          <h3>Message author</h3>
           <p className="feed-send-title">{sendTarget.company}</p>
-          <input
-            type="text"
-            placeholder="Receiver email or name"
-            value={sendReceiver}
-            onChange={(e) => setSendReceiver(e.target.value)}
-          />
-          <textarea
-            placeholder="Message"
-            value={sendText}
-            onChange={(e) => setSendText(e.target.value)}
-          />
+          <p className="feed-send-hint">
+            Sends a direct message using the feed author&apos;s account ID. Opens in
+            your Messages inbox after success.
+          </p>
+          {sendReceiverLocked ? (
+            <div className="feed-send-recipient-chip" role="group" aria-label="Recipient">
+              <span className="feed-send-recipient-label">Recipient</span>
+              <span className="feed-send-recipient-id">#{sendReceiver}</span>
+            </div>
+          ) : (
+            <label className="lc-field">
+              <span>Receiver user ID</span>
+              <input
+                className="lc-input"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 12"
+                value={sendReceiver}
+                onChange={(e) => setSendReceiver(e.target.value)}
+              />
+            </label>
+          )}
+          <label className="lc-field">
+            <span>Message</span>
+            <textarea
+              className="lc-textarea"
+              placeholder="Say hello…"
+              rows={3}
+              value={sendText}
+              onChange={(e) => setSendText(e.target.value)}
+            />
+          </label>
           <div className="feed-send-actions">
-            <button type="button" onClick={() => setSendTarget(null)}>
+            <button
+              type="button"
+              className="lc-btn lc-btn--secondary lc-btn-hit"
+              onClick={() => setSendTarget(null)}
+            >
               Cancel
             </button>
-            <button type="button" onClick={submitSend}>
+            <button
+              type="button"
+              className="lc-btn lc-btn--primary lc-btn-hit"
+              onClick={submitSend}
+            >
+              <Mail size={18} strokeWidth={2} aria-hidden />
               Send
             </button>
           </div>
@@ -1506,7 +1921,7 @@ function Dashboard() {
         aria-label="Close"
         onClick={() => setLightboxSrc(null)}
       >
-        ×
+        <X size={28} strokeWidth={2} aria-hidden />
       </button>
       <img
         className="feed-lightbox-img"
@@ -1517,82 +1932,25 @@ function Dashboard() {
     </div>
   ) : null;
 
-  if (user?.role === "company") {
+  if (roleLower === "company") {
     return (
       <div className="candidate-page">
-        <header className="topbar">
-          <div className="topbar-left">
-            <div
-              className="brand-mark"
-              role="button"
-              tabIndex={0}
-              onClick={goRoleHome}
-              onKeyDown={(ev) => ev.key === "Enter" && goRoleHome()}
-            >
-              <div className="brand-center"></div>
-            </div>
+        <AppTopbar
+          user={user}
+          searchPlaceholder="Search jobs, companies..."
+          searchValue={topSearch}
+          onSearchChange={(e) => setTopSearch(e.target.value)}
+          onSearchKeyDown={handleTopSearchKeyDown}
+          notifUnread={notifUnread}
+          messagesUnread={messagesUnread}
+          onLogoClick={goRoleHome}
+          onHomeClick={goRoleHome}
+          onMessagesClick={() => navigate("/messages")}
+          onNotificationsClick={() => navigate("/notifications")}
+          subtitle={safeUiString(user?.industry, "Company")}
+        />
 
-            <div className="top-search">
-              <span>⌕</span>
-              <input
-                type="text"
-                placeholder="Search jobs, companies..."
-                value={topSearch}
-                onChange={(e) => setTopSearch(e.target.value)}
-                onKeyDown={handleTopSearchKeyDown}
-              />
-            </div>
-          </div>
-
-          <div className="topbar-right">
-            <div
-              className="top-nav"
-              role="button"
-              tabIndex={0}
-              onClick={goRoleHome}
-              onKeyDown={(ev) => ev.key === "Enter" && goRoleHome()}
-            >
-              <span>⌂</span>
-              <p>Home</p>
-            </div>
-
-            <div
-              className="top-nav lc-msg-nav-active"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/messages")}
-            >
-              <span>✉</span>
-              <p>Messaging</p>
-              {messagesUnread > 0 ? (
-                <div className="notif-badge msg-top-badge">{messagesUnread}</div>
-              ) : null}
-            </div>
-
-            <div
-              className="top-nav notif-nav"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/notifications")}
-            >
-              <span>🔔</span>
-              <p>Notifications</p>
-              <div className="notif-badge">{notifUnread}</div>
-            </div>
-
-            <div className="top-divider"></div>
-
-            <div className="top-user">
-              <UserAvatar user={user} size={40} />
-              <div>
-                <h4>{headerNameCompany}</h4>
-                <p>Company</p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="layout">
+        <div className="dashboard-body">
           <CandidateSidebar
             variant="company"
             user={user}
@@ -1614,99 +1972,28 @@ function Dashboard() {
           {feedMainEl}
         </div>
         {sendModalJsx}
+        {reportModalJsx}
         {lightboxJsx}
       </div>
     );
   }
 
   return (
-    <div className="dashboard-page">
-      <header className="topbar">
-        <div className="topbar-left">
-          <div
-            className="small-brand"
-            role="button"
-            tabIndex={0}
-            onClick={goRoleHome}
-            onKeyDown={(event) => event.key === "Enter" && goRoleHome()}
-          >
-            <div className="small-brand-center"></div>
-          </div>
-
-          <div className="search-box">
-            <span className="search-icon">⌕</span>
-            <input
-              type="text"
-              placeholder="Search jobs, companies..."
-              value={topSearch}
-              onChange={(e) => setTopSearch(e.target.value)}
-              onKeyDown={handleTopSearchKeyDown}
-            />
-          </div>
-        </div>
-
-        <div className="topbar-right">
-          <div
-            className="top-nav-item active"
-            role="button"
-            tabIndex={0}
-            onClick={goRoleHome}
-          >
-            <span>⌂</span>
-            <p>Home</p>
-          </div>
-
-          <div
-            className="top-nav-item"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate("/messages")}
-          >
-            <span>✉</span>
-            <p>Messaging</p>
-          </div>
-
-          <div
-            className="top-nav-item notif-item"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate("/notifications")}
-          >
-            <span>🔔</span>
-            <p>Notifications</p>
-            <div className="notif-badge">{notifUnread}</div>
-          </div>
-
-          <div className="topbar-divider"></div>
-
-          <div
-            className="top-user"
-            role="button"
-            tabIndex={0}
-            onClick={() => {
-              const u = user ?? getUser();
-              if (!u?.id && !u?._id) return;
-              const id = u.id ?? u._id;
-              if (u.role === "candidate") navigate(`/candidate-profile/${id}`);
-              else if (u.role === "company") navigate(`/company-profile/${id}`);
-            }}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              const u = user ?? getUser();
-              if (!u?.id && !u?._id) return;
-              const id = u.id ?? u._id;
-              if (u.role === "candidate") navigate(`/candidate-profile/${id}`);
-              else if (u.role === "company") navigate(`/company-profile/${id}`);
-            }}
-          >
-            <UserAvatar user={user} size={40} />
-            <div>
-              <h4>{displayName}</h4>
-              <p>{roleLabel}</p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="candidate-page">
+      <AppTopbar
+        user={user}
+        searchPlaceholder="Search jobs, companies..."
+        searchValue={topSearch}
+        onSearchChange={(e) => setTopSearch(e.target.value)}
+        onSearchKeyDown={handleTopSearchKeyDown}
+        notifUnread={notifUnread}
+        messagesUnread={messagesUnread}
+        onLogoClick={goRoleHome}
+        onHomeClick={goRoleHome}
+        onMessagesClick={() => navigate("/messages")}
+        onNotificationsClick={() => navigate("/notifications")}
+        subtitle={safeUiString(user?.specialization, "") || roleLabel}
+      />
 
       <div className="dashboard-body">
         <CandidateSidebar
@@ -1717,7 +2004,7 @@ function Dashboard() {
           onDashboard={() =>
             navigate("/candidate-dashboard", { state: { tab: "dashboard" } })
           }
-          onFeed={() => navigate("/dashboard")}
+          onFeed={() => navigate(FEED_PATH)}
           onFindJobs={() =>
             navigate("/candidate-dashboard", { state: { tab: "findJobs" } })
           }
@@ -1730,11 +2017,19 @@ function Dashboard() {
           onMessages={() => navigate("/messages")}
           onNotifications={() => navigate("/notifications")}
           onMyProfile={() => {
-            const u = user ?? getUser();
-            const id = u?.id ?? u?._id;
+            const stored = getUser();
+            const u =
+              user && typeof user === "object"
+                ? user
+                : stored && typeof stored === "object"
+                  ? stored
+                  : null;
+            if (!u) return;
+            const id = u.id ?? u._id;
             if (!id) return;
-            if (u.role === "candidate") navigate(`/candidate-profile/${id}`);
-            else if (u.role === "company") navigate(`/company-profile/${id}`);
+            const r = String(u.role || "").toLowerCase();
+            if (r === "candidate") navigate(`/candidate-profile/${id}`);
+            else if (r === "company") navigate(`/company-profile/${id}`);
           }}
           onSignOut={handleSignOut}
         />
@@ -1742,6 +2037,7 @@ function Dashboard() {
         {feedMainEl}
       </div>
       {sendModalJsx}
+      {reportModalJsx}
       {lightboxJsx}
     </div>
   );

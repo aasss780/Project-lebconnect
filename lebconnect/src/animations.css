@@ -1,0 +1,59 @@
+/* CSS micro-motion — works with Framer Motion; respects reduced motion */
+
+@keyframes lc-float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes lc-badge-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(10, 102, 255, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(10, 102, 255, 0);
+  }
+}
+
+@keyframes lc-shine {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes lc-bg-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(-14px, 10px, 0) scale(1.04);
+  }
+}
+
+@keyframes lc-float-blob {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-6px, -10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

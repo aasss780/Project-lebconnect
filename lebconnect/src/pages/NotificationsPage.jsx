@@ -3,33 +3,83 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import AppTopbar from "../components/AppTopbar";
 import AppSidebar from "../components/AppSidebar";
-import UserAvatar from "../components/UserAvatar";
 import CandidateSidebar from "../components/CandidateSidebar";
 import Loading from "../components/Loading";
+import DashboardRail from "../components/DashboardRail";
 import { formatRelativeTime } from "../utils/format";
-import { dashboardPath, getRole, getUser, logout } from "../utils/auth";
+import { motion } from "framer-motion";
+import {
+  Bell,
+  Briefcase,
+  Calendar,
+  ClipboardCheck,
+  FileText,
+  Heart,
+  MessageCircle,
+  MessageSquare,
+  ShieldCheck,
+  UserPlus,
+  X,
+} from "lucide-react";
+
+import {
+  dashboardPath,
+  FEED_PATH,
+  getRole,
+  getUser,
+  logout,
+} from "../utils/auth";
+import {
+  ADMIN_DASHBOARD_PATH,
+  ADMIN_MESSAGES_PATH,
+  ADMIN_NOTIFICATIONS_PATH,
+  adminDashboardPathForTab,
+} from "../utils/adminNav";
+import { lcMotionPage } from "../utils/motionProps";
 import "./NotificationsPage.css";
+import "./Dashboard.css";
 import "./CandidateDashboard.css";
 import "./AdminDashboard.css";
 
 function normalizeType(apiType) {
   const t = String(apiType || "").toLowerCase();
-  const allowed = ["application", "message", "post", "follow", "system"];
+  const allowed = [
+    "application",
+    "message",
+    "post",
+    "follow",
+    "interview",
+    "job_alert",
+    "system",
+  ];
   return allowed.includes(t) ? t : "system";
 }
 
-function notificationVisual(apiType) {
+function notificationVisual(apiType, text = "") {
+  const raw = String(apiType || "").toLowerCase();
+  if (raw === "interview") return { Icon: Calendar, typeClass: "interview" };
+  if (raw === "job_alert") return { Icon: Briefcase, typeClass: "job-alert" };
+  if (raw === "verification")
+    return { Icon: ShieldCheck, typeClass: "verification" };
+
+  const lower = String(text || "").toLowerCase();
   switch (normalizeType(apiType)) {
     case "message":
-      return { icon: "✉", typeClass: "message" };
+      return { Icon: MessageSquare, typeClass: "message" };
     case "post":
-      return { icon: "📝", typeClass: "post" };
+      if (/\b(comment|replied)\b/i.test(lower)) {
+        return { Icon: MessageCircle, typeClass: "comment" };
+      }
+      if (/\b(like|liked)\b/i.test(lower)) {
+        return { Icon: Heart, typeClass: "like" };
+      }
+      return { Icon: FileText, typeClass: "post" };
     case "follow":
-      return { icon: "+", typeClass: "follow" };
+      return { Icon: UserPlus, typeClass: "follow" };
     case "application":
-      return { icon: "✓", typeClass: "application" };
+      return { Icon: ClipboardCheck, typeClass: "application" };
     default:
-      return { icon: "🔔", typeClass: "system" };
+      return { Icon: Bell, typeClass: "system" };
   }
 }
 
@@ -43,13 +93,14 @@ function mapApiRow(n) {
   const id = n.id ?? n._id;
   const rawType = n.type ?? "system";
   const normalized = normalizeType(rawType);
-  const { icon, typeClass } = notificationVisual(rawType);
+  const rawMsg = typeof n.message === "string" ? n.message : "";
+  const { Icon, typeClass } = notificationVisual(rawType, rawMsg);
   return {
     _id: id,
     id,
     type: normalized,
     typeClass,
-    icon,
+    Icon,
     title: n.title || "Notification",
     text: n.message || "",
     time: formatRelativeTime(n.createdAt) || "",
@@ -64,6 +115,8 @@ const TAB_IDS = [
   "post",
   "follow",
   "application",
+  "interview",
+  "job_alert",
   "system",
 ];
 
@@ -168,17 +221,10 @@ function NotificationsPage() {
   };
 
   const signOut = () => {
-    try {
-      if (role === "admin") localStorage.clear();
-      else logout();
-    } catch {
-      logout();
-    }
+    logout();
     navigate("/login", { replace: true });
   };
 
-  const displayName =
-    user?.fullName || user?.companyName || user?.email || "Member";
   const roleLabel =
     user?.role === "company"
       ? "Company"
@@ -217,6 +263,11 @@ function NotificationsPage() {
       <div className="notifications-header">
         <div>
           <h1>Notifications</h1>
+          {role === "admin" ? (
+            <p className="notifications-sub muted lc-admin-notif-hint">
+              Admin account — moderation and system notices appear here like any user.
+            </p>
+          ) : null}
           {!usedFallback ? (
             <p className="notifications-sub">{unreadCount} unread</p>
           ) : (
@@ -245,6 +296,8 @@ function NotificationsPage() {
             post: "Post",
             follow: "Follow",
             application: "Application",
+            interview: "Interview",
+            job_alert: "Job alerts",
             system: "System",
           };
           const label = labels[tid] || tid;
@@ -277,7 +330,9 @@ function NotificationsPage() {
           </div>
         ) : null}
         {!loading &&
-          filteredNotifications.map((item) => (
+          filteredNotifications.map((item) => {
+            const NotifIcon = item.Icon;
+            return (
             <div
               role="button"
               tabIndex={0}
@@ -295,7 +350,7 @@ function NotificationsPage() {
               }}
             >
               <div className={`notification-icon ${item.typeClass}`}>
-                {item.icon}
+                <NotifIcon size={22} strokeWidth={2} aria-hidden />
               </div>
 
               <div className="notification-content">
@@ -308,7 +363,7 @@ function NotificationsPage() {
                 {!item.isRead ? <div className="blue-dot"></div> : null}
                 <button
                   type="button"
-                  className="close-btn"
+                  className="close-btn lc-notif-close"
                   aria-label="Delete notification"
                   onClick={(e) => {
                     e.preventDefault();
@@ -316,19 +371,20 @@ function NotificationsPage() {
                     deleteOne(item.id, e);
                   }}
                 >
-                  ×
+                  <X strokeWidth={2.25} size={18} aria-hidden />
                 </button>
               </div>
             </div>
-          ))}
+          );
+          })}
       </div>
     </>
   );
 
   if (role === "admin") {
-    const goDash = () => navigate("/admin-dashboard");
+    const goDash = () => navigate(ADMIN_DASHBOARD_PATH);
     return (
-      <div className="candidate-page admin-app-page">
+      <motion.div className="candidate-page admin-app-page" {...lcMotionPage()}>
         <AppTopbar
           user={user}
           subtitle="Administrator"
@@ -341,10 +397,10 @@ function NotificationsPage() {
           showMessaging
           onLogoClick={goDash}
           onHomeClick={goDash}
-          onMessagesClick={() => navigate("/admin/messages")}
-          onNotificationsClick={() => navigate("/notifications")}
+          onMessagesClick={() => navigate(ADMIN_MESSAGES_PATH)}
+          onNotificationsClick={() => navigate(ADMIN_NOTIFICATIONS_PATH)}
         />
-        <div className="layout">
+        <div className="dashboard-body">
           <AppSidebar
             user={user}
             notificationsActive
@@ -352,90 +408,44 @@ function NotificationsPage() {
             notifUnread={unreadCount}
             messagesUnread={messagesUnread}
             onDashboard={goDash}
-            onUsers={() => navigate("/admin-dashboard?tab=users")}
-            onJobs={() => navigate("/admin-dashboard?tab=jobs")}
-            onComplaints={() => navigate("/admin-dashboard?tab=complaints")}
-            onMessages={() => navigate("/admin/messages")}
-            onNotifications={() => navigate("/notifications")}
+            onUsers={() => navigate(adminDashboardPathForTab("users"))}
+            onJobs={() => navigate(adminDashboardPathForTab("jobs"))}
+            onComplaints={() => navigate(adminDashboardPathForTab("complaints"))}
+            onModeration={() => navigate(adminDashboardPathForTab("moderation"))}
+            onMessages={() => navigate(ADMIN_MESSAGES_PATH)}
+            onNotifications={() => navigate(ADMIN_NOTIFICATIONS_PATH)}
             onSignOut={signOut}
           />
-          <main className="main-content notifications-main adm-main admin-notifications-main">
+          <main className="main-content lc-notifications-main adm-main admin-notifications-main lc-adm-main">
             {notificationsInner}
           </main>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="notifications-page">
-      <header className="notifications-topbar">
-        <div className="notifications-topbar-left">
-          <div
-            className="notif-brand-mark"
-            role="button"
-            tabIndex={0}
-            onClick={goRoleHome}
-            onKeyDown={(e) => e.key === "Enter" && goRoleHome()}
-          />
+    <motion.div className="candidate-page lc-page-notifications" {...lcMotionPage()}>
+      <AppTopbar
+        user={user}
+        searchPlaceholder={
+          role === "company"
+            ? "Search jobs, notifications…"
+            : "Search jobs, notifications…"
+        }
+        searchValue={topSearch}
+        onSearchChange={(e) => setTopSearch(e.target.value)}
+        onSearchKeyDown={handleTopSearchKeyDown}
+        notifUnread={unreadCount}
+        messagesUnread={messagesUnread}
+        onLogoClick={goRoleHome}
+        onHomeClick={goRoleHome}
+        onMessagesClick={() => navigate("/messages")}
+        onNotificationsClick={() => navigate("/notifications")}
+        subtitle={roleLabel}
+      />
 
-          <div className="notif-search">
-            <span>⌕</span>
-            <input
-              type="text"
-              placeholder="Search jobs, companies..."
-              value={topSearch}
-              onChange={(e) => setTopSearch(e.target.value)}
-              onKeyDown={handleTopSearchKeyDown}
-            />
-          </div>
-        </div>
-
-        <div className="notifications-topbar-right">
-          <div
-            className="notif-top-nav-item"
-            role="button"
-            tabIndex={0}
-            onClick={goRoleHome}
-          >
-            <span>⌂</span>
-            <p>Home</p>
-          </div>
-
-          <div
-            className="notif-top-nav-item notif-msg-nav"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate("/messages")}
-          >
-            <span>✉</span>
-            <p>Messaging</p>
-            {messagesUnread > 0 ? (
-              <div className="notif-msg-badge">{messagesUnread}</div>
-            ) : null}
-          </div>
-
-          <div className="notif-top-nav-item notif-top-active">
-            <span>🔔</span>
-            <p>Notifications</p>
-            {unreadCount > 0 ? (
-              <div className="notif-red-badge">{unreadCount}</div>
-            ) : null}
-          </div>
-
-          <div className="notif-top-divider"></div>
-
-          <div className="notif-user-mini">
-            <UserAvatar user={user} size={40} />
-            <div>
-              <h4>{displayName}</h4>
-              <p>{roleLabel}</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="notifications-layout">
+      <div className="layout">
         {role === "company" ? (
           <CandidateSidebar
             variant="company"
@@ -446,7 +456,7 @@ function NotificationsPage() {
             onDashboard={() =>
               navigate("/company-dashboard", { state: { tab: "dashboard" } })
             }
-            onFeed={() => navigate("/dashboard")}
+            onFeed={() => navigate(FEED_PATH)}
             onMyJobs={() =>
               navigate("/company-dashboard", { state: { tab: "jobs" } })
             }
@@ -470,7 +480,7 @@ function NotificationsPage() {
             notifUnread={unreadCount}
             messagesUnread={messagesUnread}
             onDashboard={() => navigate(dashboardUrlForRole(role))}
-            onFeed={() => navigate("/dashboard")}
+            onFeed={() => navigate(FEED_PATH)}
             onFindJobs={() =>
               navigate("/candidate-dashboard", { state: { tab: "findJobs" } })
             }
@@ -492,9 +502,10 @@ function NotificationsPage() {
           />
         )}
 
-        <main className="notifications-main">{notificationsInner}</main>
+        <main className="main-content lc-notifications-main">{notificationsInner}</main>
+        <DashboardRail />
       </div>
-    </div>
+    </motion.div>
   );
 }
 

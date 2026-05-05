@@ -12,9 +12,9 @@ body,
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  background: #f3f2ef;
-  color: #111827;
+  font-family: var(--lc-font);
+  background: var(--bg);
+  color: var(--text);
 }
 
 button,
@@ -25,14 +25,19 @@ input {
 .company-dashboard-page {
   width: 100%;
   min-height: 100vh;
-  background: #f5f7fb;
+  background: var(--bg);
 }
 
 /* TOPBAR */
 .company-topbar {
-  height: 68px;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  height: var(--lc-topbar-height);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow:
+    var(--lc-shadow-xs),
+    0 8px 32px rgba(17, 24, 39, 0.04);
   padding: 0 32px;
   display: flex;
   align-items: center;
@@ -47,10 +52,10 @@ input {
 
 .company-search {
   width: 315px;
-  height: 38px;
-  background: #ffffff;
-  border: 1px solid #d9e2ec;
-  border-radius: 8px;
+  height: 42px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -196,7 +201,7 @@ input {
 .company-left-sidebar {
   background: #ffffff;
   min-height: calc(100vh - 68px);
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
 }
@@ -206,7 +211,7 @@ input {
   align-items: center;
   gap: 14px;
   padding: 20px 22px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .company-sidebar-logo {
@@ -276,7 +281,7 @@ input {
 .company-sidebar-signout {
   margin-top: auto;
   padding: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
 }
 
 /* MAIN */
@@ -298,8 +303,8 @@ input {
   flex: 1;
   height: 56px;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--lc-radius);
   display: flex;
   align-items: center;
   padding: 0 8px;
@@ -385,7 +390,7 @@ input {
 
 .company-stat-card {
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 18px;
   padding: 20px;
   min-height: 148px;
@@ -437,7 +442,7 @@ input {
 .company-job-card,
 .applicant-card {
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 18px;
 }
 

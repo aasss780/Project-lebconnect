@@ -23,6 +23,7 @@ const POST_AUTHOR_JOIN = `
          u.location AS author_location,
          u.logo AS author_logo,
          u.profile_image AS author_profile_image,
+         u.is_verified AS author_is_verified,
          j.title AS linked_job_title,
          j.location AS linked_job_location,
          j.type AS linked_job_type,
@@ -50,6 +51,8 @@ function mapAuthor(row) {
     location: row.author_location,
     logo,
     profileImage,
+    profile_image: profileImage,
+    isVerified: Boolean(row.author_is_verified),
   };
 }
 
@@ -119,11 +122,12 @@ function passesSameFieldFilter(viewer, post) {
   if (!vr || vr === "admin") return true;
 
   const bucket = viewerSameFieldBucket(viewer);
-  if (!bucket) return false;
+  /* If viewer has no specialization/industry bucket, do not wipe the feed. */
+  if (!bucket) return true;
 
-  const author = post.author || {};
-  const ar = String(author.role || "").toLowerCase();
-  const ab = authorSameFieldBucket(author);
+  const ab = authorSameFieldBucket(post.author || {});
+  /* Posts missing author bucket still surface (avoid hiding everything). */
+  if (!ab) return true;
   return ab === bucket;
 }
 
@@ -190,6 +194,7 @@ async function hydratePosts(postBaseRows) {
       location: lu.location,
       logo,
       profileImage,
+      profile_image: profileImage,
     });
   }
 
@@ -215,6 +220,7 @@ async function hydratePosts(postBaseRows) {
         location: cr.location,
         logo: clogo,
         profileImage: cprofileImage,
+        profile_image: cprofileImage,
       },
     });
   }
@@ -331,6 +337,16 @@ async function listPosts(req, res) {
       if (vr !== "admin") {
         posts = posts.filter((p) => passesSameFieldFilter(req.user, p));
       }
+    } else if (filter === "jobsforyou") {
+      posts = posts.filter((p) => {
+        if (String(p.postType || "").toLowerCase() !== "job") return false;
+        return passesSameFieldFilter(req.user, p);
+      });
+    } else if (filter === "companieshiring") {
+      posts = posts.filter((p) => {
+        if (String(p.author?.role || "").toLowerCase() !== "company") return false;
+        return passesSameFieldFilter(req.user, p);
+      });
     }
 
     res.json(posts);
@@ -463,6 +479,9 @@ async function deletePost(req, res) {
       return res.status(403).json({ message: "You cannot delete this post" });
     }
 
+    await query(`DELETE FROM comments WHERE post_id = ?`, [pid]);
+    await query(`DELETE FROM post_likes WHERE post_id = ?`, [pid]);
+    await query(`DELETE FROM reports WHERE target_type = 'post' AND target_id = ?`, [pid]);
     await query(`DELETE FROM posts WHERE id = ?`, [pid]);
     res.json({ message: "Post deleted" });
   } catch (err) {

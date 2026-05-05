@@ -1,0 +1,181 @@
+{
+  "industries": {
+    "technology": {
+      "label": "Technology",
+      "keywords": [
+        "technology", "software", "developer", "engineering", "it ", " i.t", "programming",
+        "coding", "web development", "frontend", "backend", "full stack", "devops", "saas",
+        "tech stack", "application developer", "systems", "database", "cloud"
+      ],
+      "skills": [
+        "JavaScript", "React", "Node.js", "Express", "SQL", "MySQL", "MongoDB", "Python", "Java", "PHP", "Laravel",
+        "Git", "API", "REST", "HTML", "CSS", "UI/UX", "Figma"
+      ]
+    },
+    "marketing": {
+      "label": "Marketing",
+      "keywords": [
+        "marketing", "digital marketing", "growth", "brand awareness", "campaign", "cmo",
+        "content strategy", "social media", "seo ", "sem ", "advertising", "marcom"
+      ],
+      "skills": [
+        "SEO", "Social Media", "Content Writing", "Copywriting", "Branding", "Google Ads", "Meta Ads",
+        "Email Marketing", "Campaign Management", "Analytics"
+      ]
+    },
+    "finance": {
+      "label": "Finance",
+      "keywords": [
+        "finance", "financial", "accounting", "banking", "investment", "treasury", "fp&a",
+        "budget", "audit", "tax", "payroll", "cfo", "controller", "bookkeeping"
+      ],
+      "skills": [
+        "Accounting", "Financial Analysis", "Budgeting", "Banking", "Excel", "QuickBooks", "Auditing",
+        "Tax", "Payroll", "Reporting"
+      ]
+    },
+    "design": {
+      "label": "Design",
+      "keywords": [
+        "design", "graphic", "creative", "visual", "ux ", "ui ", "brand design", "illustration",
+        "art direction", "wireframe", "prototype"
+      ],
+      "skills": [
+        "Figma", "UI/UX", "Photoshop", "Illustrator", "Branding", "Wireframing", "Prototyping", "Graphic Design"
+      ]
+    },
+    "humanResources": {
+      "label": "Human Resources",
+      "keywords": [
+        "human resources", "hr ", " hris", "people operations", "talent acquisition", "recruitment",
+        "hiring", "payroll hr", "employee relations", "people team", "hrbp"
+      ],
+      "skills": [
+        "Recruitment", "Interviewing", "Payroll", "Employee Relations", "HRIS", "Onboarding", "Training",
+        "HR", "Human Resources"
+      ]
+    },
+    "sales": {
+      "label": "Sales",
+      "keywords": [
+        "sales", "business development", "b2b", "account executive", "revenue", "quota",
+        "pipeline", "crm", "retail sales", "inside sales", "field sales"
+      ],
+      "skills": [
+        "CRM", "Negotiation", "Lead Generation", "Customer Service", "B2B Sales", "Cold Calling", "Account Management"
+      ]
+    },
+    "healthcare": {
+      "label": "Healthcare",
+      "keywords": [
+        "healthcare", "health care", "medical", "hospital", "clinic", "nursing", "pharma",
+        "patient", "clinical", "health services", "caregiver"
+      ],
+      "skills": [
+        "Patient Care", "Medical Records", "Nursing", "Pharmacy", "Lab Testing", "Healthcare Administration"
+      ]
+    },
+    "education": {
+      "label": "Education",
+      "keywords": [
+        "education", "teaching", "school", "university", "academic", "curriculum", "classroom",
+        "tutor", "e-learning", "training and development", "pedagogy", "instructor"
+      ],
+      "skills": [
+        "Teaching", "Tutoring", "Curriculum Planning", "Classroom Management", "E-learning", "Training"
+      ]
+    },
+    "legal": {
+      "label": "Legal",
+      "keywords": [
+        "legal", "law firm", "attorney", "lawyer", "paralegal", "compliance", "contracts",
+        "litigation", "corporate law", "counsel"
+      ],
+      "skills": [
+        "Legal Research", "Contracts", "Compliance", "Case Management", "Corporate Law"
+      ]
+    },
+    "constructionEngineering": {
+      "label": "Construction & Engineering",
+      "keywords": [
+        "construction", "civil engineering", "electrical engineering", "mechanical engineering",
+        "site engineer", "quantity survey", "autocad", "infrastructure", "contractor", "mep",
+        "structural", "project site"
+      ],
+      "skills": [
+        "AutoCAD", "Site Supervision", "Project Management", "Quantity Surveying", "Civil Engineering",
+        "Electrical Engineering", "Mechanical Engineering"
+      ]
+    },
+    "hospitality": {
+      "label": "Hospitality",
+      "keywords": [
+        "hospitality", "hotel", "restaurant", "catering", "events", "banquet", "front office",
+        "guest services", "food and beverage", "f&b", "resort", "concierge"
+      ],
+      "skills": [
+        "Front Desk", "Reservations", "Food Safety", "Customer Service", "Hotel Management", "Event Planning"
+      ]
+    },
+    "retail": {
+      "label": "Retail",
+      "keywords": [
+        "retail", "store", "merchandising", "pos ", "inventory", "shop", "cashier",
+        "supermarket", "boutique", "ecommerce retail", "store manager"
+      ],
+      "skills": [
+        "Inventory Management", "Merchandising", "Cashier", "POS", "Customer Service", "Store Management"
+      ]
+    }
+  },
+  "aliases": {
+    "social media marketing": "Social Media",
+    "social media": "Social Media",
+    "google advertising": "Google Ads",
+    "google ads": "Google Ads",
+    "meta advertising": "Meta Ads",
+    "facebook ads": "Meta Ads",
+    "excel sheets": "Excel",
+    "microsoft excel": "Excel",
+    "ms excel": "Excel",
+    "customer support": "Customer Service",
+    "client support": "Customer Service",
+    "human resources": "HR",
+    "hr generalist": "HR",
+    "ui ux": "UI/UX",
+    "ui/ux design": "UI/UX",
+    "user interface": "UI/UX",
+    "user experience": "UI/UX",
+    "javascript": "JavaScript",
+    "js ": "JavaScript",
+    "react.js": "React",
+    "reactjs": "React",
+    "node js": "Node.js",
+    "nodejs": "Node.js",
+    "my sql": "MySQL",
+    "sql server": "SQL",
+    "rest api": "REST",
+    "restful": "REST",
+    "api design": "API",
+    "git version control": "Git",
+    "photoshop": "Photoshop",
+    "adobe illustrator": "Illustrator",
+    "quick books": "QuickBooks",
+    "seo optimization": "SEO",
+    "search engine optimization": "SEO",
+    "content writer": "Content Writing",
+    "copy writer": "Copywriting",
+    "b2b": "B2B Sales",
+    "cold call": "Cold Calling",
+    "cad": "AutoCAD",
+    "qty surveying": "Quantity Surveying",
+    "point of sale": "POS",
+    "bookkeeping": "Accounting",
+    "financial reporting": "Reporting",
+    "js": "JavaScript",
+    "node": "Node.js",
+    "html5": "HTML",
+    "css3": "CSS",
+    "hr": "Human Resources"
+  }
+}

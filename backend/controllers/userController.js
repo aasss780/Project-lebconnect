@@ -1,6 +1,13 @@
 const { query } = require("../config/db");
 const { USER_PUBLIC_COLUMNS } = require("../constants/userColumns");
-const { mapUser, mapJobJoined, parseJson, sqlTextCell } = require("../utils/mappers");
+const {
+  mapUser,
+  mapJobJoined,
+  parseJson,
+  sqlTextCell,
+  userForClientSession,
+} = require("../utils/mappers");
+const { extractPdfTextFromBase64, extensionFromFileName } = require("../utils/cvExtract");
 const {
   normalizeSpecialization,
   normalizeIndustry,
@@ -22,7 +29,8 @@ const JOB_SELECT_JOIN = `
          u.company_name,
          u.industry AS company_industry,
          u.location AS company_location,
-         u.logo AS company_logo
+         u.logo AS company_logo,
+         u.is_verified AS company_is_verified
   FROM jobs j
   JOIN users u ON u.id = j.company_id
 `;
@@ -72,6 +80,7 @@ async function getPublicProfile(req, res) {
       const cov = sqlTextCell(user.cover_image);
       return res.json({
         profileType: "candidate",
+        id: user.id,
         role: user.role,
         fullName: user.full_name,
         specialization: user.specialization,
@@ -80,10 +89,14 @@ async function getPublicProfile(req, res) {
         skills: parseJson(user.skills, []),
         education: parseJson(user.education, []),
         experience: parseJson(user.experience, []),
+        candidateCv: sqlTextCell(user.candidate_cv),
+        candidateCvFileName: user.candidate_cv_file_name ?? null,
+        candidateCvText: sqlTextCell(user.candidate_cv_text),
         profileImage: pic,
         coverImage: cov,
         profile_image: pic,
         cover_image: cov,
+        isVerified: Boolean(user.is_verified),
         posts,
       });
     }
@@ -99,6 +112,7 @@ async function getPublicProfile(req, res) {
 
       return res.json({
         profileType: "company",
+        id: user.id,
         role: user.role,
         companyName: user.company_name,
         industry: user.industry,
@@ -111,6 +125,7 @@ async function getPublicProfile(req, res) {
         coverImage: cov,
         profile_image: profPic || lg,
         cover_image: cov,
+        isVerified: Boolean(user.is_verified),
         openJobs: openJobsRows.map(mapJobJoined),
         posts,
       });
@@ -140,6 +155,16 @@ function normalizeProfileBody(raw) {
       body[camel] = src[snake];
     }
   }
+  const cvAliases = [
+    ["candidate_cv", "candidateCv"],
+    ["candidate_cv_file_name", "candidateCvFileName"],
+    ["candidate_cv_text", "candidateCvText"],
+  ];
+  for (const [snake, camel] of cvAliases) {
+    if (body[camel] === undefined && src[snake] !== undefined) {
+      body[camel] = src[snake];
+    }
+  }
   function coerceMaybeArray(key) {
     if (!Object.prototype.hasOwnProperty.call(body, key)) return;
     const v = body[key];
@@ -161,6 +186,7 @@ function normalizeProfileBody(raw) {
   coerceMaybeArray("skills");
   coerceMaybeArray("education");
   coerceMaybeArray("experience");
+  if (body.candidateCv === "") body.candidateCv = null;
   for (const k of ["profileImage", "coverImage", "logo"]) {
     if (body[k] === null || body[k] === "") delete body[k];
   }
@@ -274,6 +300,55 @@ async function updateMyProfile(req, res) {
       vals.push(normalizeIndustry(body.industry) || null);
     }
 
+    if (
+      dbRole === "candidate" &&
+      Object.prototype.hasOwnProperty.call(body, "candidateCv")
+    ) {
+      const cvPayload = body.candidateCv;
+      if (cvPayload === null || cvPayload === "") {
+        updates.push("candidate_cv = ?", "candidate_cv_file_name = ?", "candidate_cv_text = ?");
+        vals.push(null, null, null);
+      } else if (typeof cvPayload === "string" && cvPayload.trim()) {
+        let fileName =
+          typeof body.candidateCvFileName === "string"
+            ? body.candidateCvFileName.trim().slice(0, 255)
+            : "cv-upload";
+        if (!fileName) fileName = "cv-upload";
+        let cvText =
+          typeof body.candidateCvText === "string" ? String(body.candidateCvText).trim() : "";
+
+        const ext = extensionFromFileName(fileName);
+        if (ext === "pdf" && !cvText) {
+          const extracted = await extractPdfTextFromBase64(cvPayload);
+          cvText = extracted.text ? extracted.text.trim() : "";
+          if (
+            extracted.error &&
+            (!cvText || cvText.length < 12)
+          ) {
+            console.error("[updateMyProfile] PDF extraction failed:", extracted.error);
+          }
+        }
+
+        updates.push(
+          "candidate_cv = ?",
+          "candidate_cv_file_name = ?",
+          "candidate_cv_text = ?"
+        );
+        vals.push(cvPayload.trim(), fileName, cvText || null);
+      }
+    } else if (
+      dbRole === "candidate" &&
+      body.candidateCvText !== undefined &&
+      body.candidateCv === undefined
+    ) {
+      const cvTextOnly =
+        body.candidateCvText === null || body.candidateCvText === ""
+          ? null
+          : String(body.candidateCvText).trim() || null;
+      updates.push("candidate_cv_text = ?");
+      vals.push(cvTextOnly);
+    }
+
     if (updates.length) {
       vals.push(req.user.id);
       await query(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, vals);
@@ -285,13 +360,17 @@ async function updateMyProfile(req, res) {
 
     const row = rows[0];
     const u = mapUser(row);
+    const safe = userForClientSession({
+      ...u,
+      profileImage: u.profileImage ?? null,
+      coverImage: u.coverImage ?? null,
+      logo: u.logo ?? null,
+      profile_image: u.profileImage ?? null,
+      cover_image: u.coverImage ?? null,
+    });
     res.json({
       message: "Profile updated",
-      user: {
-        ...u,
-        profile_image: u.profileImage ?? null,
-        cover_image: u.coverImage ?? null,
-      },
+      user: safe,
     });
   } catch (err) {
     console.error("[updateMyProfile]", err);
@@ -323,7 +402,7 @@ async function updateMyProfile(req, res) {
 async function listCompanies(req, res) {
   try {
     const rows = await query(
-      `SELECT id, company_name, industry, location, logo, email, website, company_size, bio, created_at
+      `SELECT id, company_name, industry, location, logo, email, website, company_size, bio, is_verified, created_at
        FROM users WHERE role = 'company' ORDER BY created_at DESC`
     );
     res.json(
@@ -338,6 +417,7 @@ async function listCompanies(req, res) {
         website: r.website,
         companySize: r.company_size,
         bio: r.bio,
+        isVerified: Boolean(r.is_verified),
         createdAt: r.created_at,
       }))
     );

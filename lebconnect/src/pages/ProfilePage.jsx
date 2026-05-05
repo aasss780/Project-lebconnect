@@ -3,11 +3,13 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import api from "../api/axios";
 import CandidateSidebar from "../components/CandidateSidebar";
 import Modal from "../components/Modal";
+import ReportContentModal from "../components/ReportContentModal";
 import UserAvatar from "../components/UserAvatar";
+import VerifiedCompanyBadge from "../components/VerifiedCompanyBadge";
 import { formatRelativeTime, initialsFromName } from "../utils/format";
-import { displayNameFromUser } from "../utils/avatar";
 import {
   dashboardPath,
+  FEED_PATH,
   getToken,
   getUser,
   isLoggedIn,
@@ -21,6 +23,8 @@ import {
 } from "../utils/feedStorage";
 import { hydrateFollowing, toggleFollowViaApi } from "../utils/followApi";
 import CategoryPicker from "../components/CategoryPicker";
+import AppTopbar from "../components/AppTopbar";
+import DashboardRail from "../components/DashboardRail";
 import {
   COMPANY_INDUSTRY_OPTIONS,
   composeIndustryErrors,
@@ -32,11 +36,13 @@ import {
   getProfileImage,
   isDisplayableMediaUrl,
 } from "../utils/profileMedia";
+import { normalizeStoredUser } from "../utils/sessionUser";
 import {
   compressDataUrlForUpload,
   fileToCompressedDataUrl,
 } from "../utils/imageUpload";
 import { useAuthUser } from "../hooks/useAuthUser";
+import { safeUiString } from "../utils/uiString";
 import "./ProfilePage.css";
 import "./CandidateDashboard.css";
 import "./CompanyDashboardExtras.css";
@@ -63,19 +69,61 @@ function idsEqual(a, b) {
   return String(a) === String(b);
 }
 
+function formatProfileLoadError(error) {
+  const m =
+    error?.response?.data?.message ??
+    error?.response?.data ??
+    error?.message;
+  if (typeof m === "string" && m.trim()) return m.trim();
+  if (m && typeof m === "object") {
+    try {
+      return JSON.stringify(m);
+    } catch {
+      return "Request failed.";
+    }
+  }
+  return "Profile not found or could not load.";
+}
+
 function mapPostForUi(p, idx) {
-  const a = p.author || {};
-  const name = a.companyName || a.fullName || "Member";
+  if (!p || typeof p !== "object") {
+    return {
+      company: "Member",
+      time: "— · 🌐",
+      text: "",
+      image: null,
+      logoText: "ME",
+      avatarUrl: null,
+      postId: null,
+      idx,
+    };
+  }
+  const a =
+    p.author && typeof p.author === "object" ? p.author : {};
+  const name = safeUiString(
+    a.companyName || a.fullName || a.company_name || a.full_name,
+    "Member"
+  );
   const img =
     p.image && String(p.image).trim() ? String(p.image).trim() : null;
   const av = getProfileImage(a);
   const avatarUrl = isDisplayableMediaUrl(av) ? av : null;
+  let timeStr = "— · 🌐";
+  try {
+    timeStr = `${formatRelativeTime(p.createdAt)} · 🌐`;
+  } catch {
+    /* keep default */
+  }
+  const logoSource = safeUiString(name, "Company");
   return {
     company: name,
-    time: `${formatRelativeTime(p.createdAt)} · 🌐`,
-    text: p.content || "",
+    time: timeStr,
+    text:
+      typeof p.content === "string"
+        ? p.content
+        : safeUiString(p.content != null ? String(p.content) : "", ""),
     image: img,
-    logoText: initialsFromName(name).slice(0, 4),
+    logoText: initialsFromName(logoSource).slice(0, 4),
     avatarUrl,
     postId: p.id ?? p._id,
     idx,
@@ -83,16 +131,24 @@ function mapPostForUi(p, idx) {
 }
 
 function ProfilePage() {
-  const { id } = useParams();
+  const { id: urlProfileId } = useParams();
   const navigate = useNavigate();
   const viewerBase = useAuthUser();
   const loggedIn = isLoggedIn();
   const viewerRole = viewerBase?.role ?? null;
   const viewerId = viewerBase?.id ?? viewerBase?._id;
+  const stored = getUser();
+  const currentUser =
+    stored && typeof stored === "object" ? stored : {};
+  const profileId =
+    urlProfileId != null && String(urlProfileId).trim() !== ""
+      ? urlProfileId
+      : viewerId ?? currentUser?.id ?? currentUser?._id ?? null;
 
   const [activeTab, setActiveTab] = useState("about");
   const [profile, setProfile] = useState(null);
   const [usedFallback, setUsedFallback] = useState(false);
+  const [fetchError, setFetchError] = useState("");
   const [notifUnread, setNotifUnread] = useState(0);
   const [topSearch, setTopSearch] = useState("");
   const [followedSet, setFollowedSet] = useState(() => loadFollowSet());
@@ -115,20 +171,41 @@ function ProfilePage() {
     cust: "",
   });
   const [companyProfileNotice, setCompanyProfileNotice] = useState("");
+  const [reportCompanyOpen, setReportCompanyOpen] = useState(false);
+  const [companyReviewsBundle, setCompanyReviewsBundle] = useState(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsLoadError, setReviewsLoadError] = useState(false);
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    title: "",
+    comment: "",
+    interviewExperience: "",
+  });
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewNotice, setReviewNotice] = useState("");
 
   const profileNumericId = useMemo(() => {
-    const n = Number(id);
+    const n = Number(profileId);
     return Number.isFinite(n) ? n : null;
-  }, [id]);
+  }, [profileId]);
 
   const reloadProfile = async () => {
     try {
-      const { data: prof } = await api.get(`/api/users/profile/${id}`);
-      setProfile(prof);
-      setUsedFallback(false);
-    } catch {
+      if (!profileId) return;
+      const { data: prof } = await api.get(`/api/users/profile/${profileId}`);
+      if (prof && typeof prof === "object") {
+        setProfile(prof);
+        setUsedFallback(false);
+        setFetchError("");
+      } else {
+        setProfile({ ...PROFILE_EMPTY_COMPANY });
+        setUsedFallback(true);
+        setFetchError("Invalid profile response.");
+      }
+    } catch (e) {
       setProfile({ ...PROFILE_EMPTY_COMPANY });
       setUsedFallback(true);
+      setFetchError(formatProfileLoadError(e));
     }
   };
 
@@ -136,24 +213,73 @@ function ProfilePage() {
     let cancelled = false;
     setProfile(null);
     setUsedFallback(false);
+    setFetchError("");
+    if (!profileId) {
+      setProfile({ ...PROFILE_EMPTY_COMPANY });
+      setUsedFallback(true);
+      setFetchError("Missing profile id. Open Company Profile from the sidebar.");
+      return () => {
+        cancelled = true;
+      };
+    }
     (async () => {
       try {
-        const { data: prof } = await api.get(`/api/users/profile/${id}`);
+        const { data: prof } = await api.get(`/api/users/profile/${profileId}`);
         if (!cancelled) {
-          setProfile(prof);
-          setUsedFallback(false);
+          if (prof && typeof prof === "object") {
+            setProfile(prof);
+            setUsedFallback(false);
+            setFetchError("");
+          } else {
+            setProfile({ ...PROFILE_EMPTY_COMPANY });
+            setUsedFallback(true);
+            setFetchError("Invalid profile response.");
+          }
         }
-      } catch {
+      } catch (e) {
         if (!cancelled) {
           setProfile({ ...PROFILE_EMPTY_COMPANY });
           setUsedFallback(true);
+          setFetchError(formatProfileLoadError(e));
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [profileId]);
+
+  useEffect(() => {
+    if (
+      profile?.profileType !== "company" ||
+      profileNumericId == null ||
+      Number.isNaN(profileNumericId)
+    ) {
+      setCompanyReviewsBundle(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setReviewsLoading(true);
+      setReviewsLoadError(false);
+      try {
+        const { data } = await api.get(
+          `/api/companies/${profileNumericId}/reviews`
+        );
+        if (!cancelled) setCompanyReviewsBundle(data || null);
+      } catch {
+        if (!cancelled) {
+          setCompanyReviewsBundle(null);
+          setReviewsLoadError(true);
+        }
+      } finally {
+        if (!cancelled) setReviewsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.profileType, profileNumericId, profileId]);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -213,6 +339,11 @@ function ProfilePage() {
     };
   }, [loggedIn]);
 
+  const followedSetSafe = useMemo(() => {
+    if (followedSet instanceof Set) return followedSet;
+    return new Set();
+  }, [followedSet]);
+
   const goRoleHome = () => {
     if (viewerRole) navigate(dashboardPath(viewerRole));
     else navigate("/");
@@ -239,13 +370,14 @@ function ProfilePage() {
   };
 
   const toggleFollowProfile = async () => {
-    const has = followedSet.has(String(id));
+    if (!profileId) return;
+    const has = followedSetSafe.has(String(profileId));
     if (!loggedIn) {
-      setFollowedSet(toggleFollowInStorage(id));
+      setFollowedSet(toggleFollowInStorage(profileId));
       return;
     }
     try {
-      const next = await toggleFollowViaApi(id, has);
+      const next = await toggleFollowViaApi(profileId, has);
       if (next) setFollowedSet(next);
     } catch (err) {
       const msg =
@@ -254,42 +386,149 @@ function ProfilePage() {
     }
   };
 
-  const isFollowingProfile = followedSet.has(String(id));
+  const isFollowingProfile =
+    profileId != null ? followedSetSafe.has(String(profileId)) : false;
 
   const sameAsViewer =
-    viewerId != null && id != null && idsEqual(viewerId, id);
+    viewerId != null && profileId != null && idsEqual(viewerId, profileId);
 
   const viewer = useMemo(() => {
     if (!viewerBase) return null;
     if (!loggedIn || !sameAsViewer || !profile || profile.profileType !== "company") {
       return viewerBase;
     }
-    const role = profile.role || viewerBase.role || "company";
-    const pic = getProfileImage({ ...profile, role });
-    const cov = getCoverImage(profile);
-    const out = { ...viewerBase };
-    if (isDisplayableMediaUrl(pic)) {
-      out.logo = pic;
-      out.profileImage = pic;
-      out.profile_image = pic;
-    }
-    if (isDisplayableMediaUrl(cov)) {
-      out.coverImage = cov;
-      out.cover_image = cov;
-    }
-    return out;
+    return normalizeStoredUser({
+      ...viewerBase,
+      ...profile,
+      role: profile.role || viewerBase.role || "company",
+      id: viewerBase.id ?? viewerBase._id,
+      email: viewerBase.email,
+    });
   }, [viewerBase, loggedIn, sameAsViewer, profile]);
 
   if (profile === null) {
+    const loadingMain = (
+      <main className="main-content lc-candidate-profile-shell">
+        <div className="lc-profile-loading-shell lc-glass-card">
+          <p>Loading profile…</p>
+        </div>
+      </main>
+    );
+    if (!loggedIn) {
+      return (
+        <div className="lc-profile-loading lc-profile-loading--simple lc-profile-loading--guest-wide">
+          <p>Loading company profile…</p>
+        </div>
+      );
+    }
+    if (viewerRole === "company") {
+      return (
+        <div className="candidate-page">
+          <AppTopbar
+            user={viewer}
+            searchPlaceholder="Search jobs, companies..."
+            searchValue={topSearch}
+            onSearchChange={(e) => setTopSearch(e.target.value)}
+            onSearchKeyDown={handleTopSearchKeyDown}
+            notifUnread={notifUnread}
+            messagesUnread={messagesUnread}
+            onLogoClick={goRoleHome}
+            onHomeClick={goRoleHome}
+            onMessagesClick={() => navigate("/messages")}
+            onNotificationsClick={() => navigate("/notifications")}
+            subtitle="Company"
+          />
+          <div className="layout">
+            <CandidateSidebar
+              variant="company"
+              user={viewer}
+              activeKey="myProfile"
+              notifUnread={notifUnread}
+              messagesUnread={messagesUnread}
+              onDashboard={() =>
+                navigate("/company-dashboard", { state: { tab: "dashboard" } })
+              }
+              onFeed={() => navigate(FEED_PATH)}
+              onMyJobs={() =>
+                navigate("/company-dashboard", { state: { tab: "jobs" } })
+              }
+              onApplicants={() =>
+                navigate("/company-dashboard", { state: { tab: "applicants" } })
+              }
+              onMessages={() => navigate("/messages")}
+              onNotifications={() => navigate("/notifications")}
+              onMyProfile={() =>
+                viewerId && navigate(`/company-profile/${viewerId}`)
+              }
+              onFindJobs={() => {}}
+              onApplications={() => {}}
+              onSavedJobs={() => {}}
+              onSignOut={signOut}
+            />
+            {loadingMain}
+            <DashboardRail />
+          </div>
+        </div>
+      );
+    }
+
+    const dashCand = () =>
+      viewerRole === "admin"
+        ? navigate("/admin-dashboard")
+        : navigate("/candidate-dashboard", { state: { tab: "dashboard" } });
+
     return (
-      <div className="lc-profile-loading">
-        <p>Loading…</p>
+      <div className="candidate-page">
+        <AppTopbar
+          user={viewer}
+          searchPlaceholder="Search jobs, companies..."
+          searchValue={topSearch}
+          onSearchChange={(e) => setTopSearch(e.target.value)}
+          onSearchKeyDown={handleTopSearchKeyDown}
+          notifUnread={notifUnread}
+          messagesUnread={messagesUnread}
+          onLogoClick={goRoleHome}
+          onHomeClick={goRoleHome}
+          onMessagesClick={() => navigate("/messages")}
+          onNotificationsClick={() => navigate("/notifications")}
+          subtitle="Profile"
+        />
+        <div className="layout">
+          <CandidateSidebar
+            user={viewer}
+            activeKey="companyBrowse"
+            notifUnread={notifUnread}
+            messagesUnread={messagesUnread}
+            onDashboard={dashCand}
+            onFeed={() => navigate(FEED_PATH)}
+            onFindJobs={() =>
+              navigate("/candidate-dashboard", { state: { tab: "findJobs" } })
+            }
+            onApplications={() =>
+              navigate("/candidate-dashboard", {
+                state: { tab: "applications" },
+              })
+            }
+            onSavedJobs={() =>
+              navigate("/candidate-dashboard", { state: { tab: "savedJobs" } })
+            }
+            onMessages={() => navigate("/messages")}
+            onNotifications={() => navigate("/notifications")}
+            onMyProfile={() => {
+              const uid = viewer?.id ?? viewer?._id;
+              if (uid) navigate(`/candidate-profile/${uid}`);
+            }}
+            onSignOut={signOut}
+          />
+          {loadingMain}
+          <DashboardRail />
+        </div>
       </div>
     );
   }
 
   if (profile.profileType === "candidate") {
-    return <Navigate to={`/candidate-profile/${id}`} replace />;
+    return <Navigate to={`/candidate-profile/${profileId}`} replace />;
   }
 
   const prof =
@@ -299,19 +538,35 @@ function ProfilePage() {
         ? PROFILE_EMPTY_COMPANY
         : PROFILE_EMPTY_COMPANY;
 
-  const companyName = (prof?.companyName || "").trim() || "Company";
-  const industry = (prof?.industry || "").trim();
-  const location = (prof?.location || "").trim();
-  const website = (prof?.website || "").trim();
-  const bio = typeof prof?.bio === "string" ? prof.bio.trim() : "";
+  const companyName =
+    safeUiString(prof?.companyName ?? prof?.company_name, "").trim() ||
+    "Company";
+  const industry = safeUiString(prof?.industry, "").trim();
+  const location = safeUiString(prof?.location, "").trim();
+  const website = safeUiString(prof?.website, "").trim();
+  const bio =
+    typeof prof?.bio === "string"
+      ? prof.bio.trim()
+      : safeUiString(prof?.bio != null ? String(prof.bio) : "", "").trim();
   const profWithRole = { ...prof, role: prof.role || "company" };
   const logoSource = getProfileImage(profWithRole);
   const logoImgSrc = isDisplayableMediaUrl(logoSource) ? logoSource : null;
   const coverSource = getCoverImage(prof);
   const coverBgUrl = isDisplayableMediaUrl(coverSource) ? coverSource : null;
-  const openJobs = Array.isArray(prof?.openJobs) ? prof.openJobs : [];
-  const postsRaw =
-    Array.isArray(prof?.posts) && prof.posts.length ? prof.posts : [];
+  const openJobs = (
+    Array.isArray(prof?.openJobs) ? prof.openJobs : []
+  ).filter((j) => j && typeof j === "object");
+  const postsRaw = (
+    Array.isArray(prof?.posts) && prof.posts.length ? prof.posts : []
+  ).filter((p) => p && typeof p === "object");
+  const isCoVerified =
+    prof?.isVerified === true ||
+    prof?.is_verified === true ||
+    prof?.isVerified === 1 ||
+    prof?.is_verified === 1 ||
+    String(prof?.isVerified || prof?.is_verified || "")
+      .toLowerCase()
+      .trim() === "true";
 
   const logoMark = logoImgSrc ? (
       <div className="company-logo-large" style={{ padding: 0 }}>
@@ -328,11 +583,22 @@ function ProfilePage() {
         />
       </div>
     ) : (
-      <div className="company-logo-large">{initialsFromName(companyName)}</div>
+      <div className="company-logo-large">
+        {initialsFromName(safeUiString(companyName, "Company"))}
+      </div>
     );
 
   const postsUi =
     postsRaw.length > 0 ? postsRaw.map((p, i) => mapPostForUi(p, i)) : [];
+
+  const companySizeStr = safeUiString(
+    typeof prof?.companySize === "string"
+      ? prof.companySize
+      : prof?.companySize != null
+        ? String(prof.companySize)
+        : "",
+    ""
+  ).trim();
 
   const handlePostLike = async (postId) => {
     if (!postId) return;
@@ -378,6 +644,27 @@ function ProfilePage() {
     }
   };
 
+  const canDeleteProfilePost = (row) => {
+    if (!row?.postId) return false;
+    if (String(viewerRole || "").toLowerCase() === "admin") return true;
+    return Boolean(
+      loggedIn &&
+        sameAsViewer &&
+        String(viewerRole || "").toLowerCase() === "company"
+    );
+  };
+
+  const handleProfilePostDelete = async (postId) => {
+    if (!postId) return;
+    if (!window.confirm("Delete this post? This action cannot be undone.")) return;
+    try {
+      await api.delete(`/api/posts/${postId}`);
+      await reloadProfile();
+    } catch (e) {
+      alert(e.response?.data?.message || e.message || "Could not delete post");
+    }
+  };
+
   const renderAbout = () => (
     <div className="profile-tab-content">
       <h3>About</h3>
@@ -419,8 +706,8 @@ function ProfilePage() {
           <div>
             <h4>Company Size</h4>
             <p>
-              {prof?.companySize?.trim() ? (
-                prof.companySize
+              {companySizeStr ? (
+                companySizeStr
               ) : !usedFallback ? (
                 <span className="lc-profile-muted">No company size added yet.</span>
               ) : (
@@ -483,14 +770,25 @@ function ProfilePage() {
                 <p>{row.time}</p>
               </div>
             </div>
-            <button
-              type="button"
-              className="three-dots-btn"
-              disabled
-              title="More actions"
-            >
-              ⋮
-            </button>
+            {canDeleteProfilePost(row) ? (
+              <button
+                type="button"
+                className="three-dots-btn lc-company-post-del"
+                title="Delete post"
+                onClick={() => void handleProfilePostDelete(row.postId)}
+              >
+                Delete
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="three-dots-btn"
+                disabled
+                title="More actions"
+              >
+                ⋮
+              </button>
+            )}
           </div>
 
           <p className="company-post-text">{row.text}</p>
@@ -533,8 +831,8 @@ function ProfilePage() {
       loggedIn &&
       viewerRole === "company" &&
       viewerId &&
-      id &&
-      String(viewerId) === String(id);
+      profileId &&
+      String(viewerId) === String(profileId);
     const isCandidate = loggedIn && viewerRole === "candidate";
 
     return (
@@ -547,9 +845,15 @@ function ProfilePage() {
             return (
               <div className="open-job-card" key={jid}>
                 <div>
-                  <h4>{j.title}</h4>
+                  <h4>{safeUiString(j.title, "Open role")}</h4>
                   <p>
-                    {[j.location, j.type, j.salary].filter(Boolean).join(" · ")}
+                    {[
+                      j.location ? safeUiString(j.location, "") : "",
+                      j.type ? safeUiString(j.type, "") : "",
+                      j.salary ? safeUiString(j.salary, "") : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 </div>
                 <div
@@ -860,7 +1164,10 @@ function ProfilePage() {
         <button
           type="button"
           className="outline-btn"
-          onClick={() => navigate(`/messages?userId=${encodeURIComponent(id)}`)}
+          onClick={() => {
+            if (profileId == null || profileId === "") return;
+            navigate(`/messages?userId=${encodeURIComponent(profileId)}`);
+          }}
         >
           💬 Message
         </button>
@@ -871,17 +1178,20 @@ function ProfilePage() {
         >
           {isFollowingProfile ? "✓ Following" : "+ Follow"}
         </button>
-        <button type="button" className="circle-btn" title="More" disabled>
-          ⋮
-        </button>
+        {viewerRole === "candidate" ? (
+          <button
+            type="button"
+            className="outline-btn lc-profile-report-co"
+            onClick={() => setReportCompanyOpen(true)}
+          >
+            Report
+          </button>
+        ) : null}
       </div>
     ) : loggedIn && sameAsViewer && viewerRole === "company" ? (
       <div className="profile-header-actions">
         <button type="button" className="primary-btn" onClick={openCompanyEdit}>
           ✎ Edit Profile
-        </button>
-        <button type="button" className="circle-btn" title="More" disabled>
-          ⋮
         </button>
       </div>
     ) : loggedIn ? (
@@ -905,6 +1215,229 @@ function ProfilePage() {
       </div>
     );
 
+  const reloadCompanyReviews = async () => {
+    if (
+      profileNumericId == null ||
+      !Number.isFinite(profileNumericId) ||
+      prof?.profileType !== "company"
+    ) {
+      return;
+    }
+    try {
+      const { data } = await api.get(
+        `/api/companies/${profileNumericId}/reviews`
+      );
+      setCompanyReviewsBundle(data || null);
+      setReviewsLoadError(false);
+    } catch {
+      setReviewsLoadError(true);
+    }
+  };
+
+  const submitCompanyReview = async (e) => {
+    e.preventDefault();
+    if (
+      !loggedIn ||
+      viewerRole !== "candidate" ||
+      sameAsViewer ||
+      profileNumericId == null
+    ) {
+      return;
+    }
+    const title = reviewForm.title.trim();
+    const comment = reviewForm.comment.trim();
+    if (!title || !comment) {
+      setReviewNotice("Add a title and comment for your review.");
+      return;
+    }
+    setReviewSaving(true);
+    setReviewNotice("");
+    try {
+      const { data } = await api.post(
+        `/api/companies/${profileNumericId}/reviews`,
+        {
+          rating: Number(reviewForm.rating),
+          title,
+          comment,
+          interviewExperience:
+            reviewForm.interviewExperience.trim() || undefined,
+        }
+      );
+      setReviewNotice(data?.message || "Review submitted.");
+      setReviewForm({
+        rating: 5,
+        title: "",
+        comment: "",
+        interviewExperience: "",
+      });
+      await reloadCompanyReviews();
+    } catch (err) {
+      setReviewNotice(
+        err.response?.data?.message ||
+          err.message ||
+          "Could not submit review."
+      );
+    } finally {
+      setReviewSaving(false);
+    }
+  };
+
+  const renderReviews = () => {
+    const list = Array.isArray(companyReviewsBundle?.reviews)
+      ? companyReviewsBundle.reviews
+      : [];
+    const avg =
+      companyReviewsBundle?.averageRating ?? null;
+
+    return (
+      <div className="profile-tab-content lc-company-reviews-tab">
+        {reviewNotice ? (
+          <p className="lc-review-notice-banner" role="status">
+            {reviewNotice}
+          </p>
+        ) : null}
+        {reviewsLoading ? (
+          <p className="about-text lc-profile-muted">Loading reviews…</p>
+        ) : null}
+        {reviewsLoadError && !reviewsLoading ? (
+          <p className="about-text lc-review-err-text">
+            Could not load reviews. Try again later.
+          </p>
+        ) : null}
+        {!reviewsLoading && companyReviewsBundle && avg != null ? (
+          <div className="lc-review-summary">
+            <strong>{avg}</strong>
+            <span className="lc-review-stars" aria-hidden>
+              {"★".repeat(Math.round(avg || 0))}
+              {"☆".repeat(
+                Math.max(0, 5 - Math.min(5, Math.round(Number(avg) || 0)))
+              )}
+            </span>
+            <span className="lc-profile-muted">
+              {companyReviewsBundle.count ?? list.length} approved reviews
+            </span>
+          </div>
+        ) : null}
+
+        {list.length === 0 && !reviewsLoading && !reviewsLoadError ? (
+          <p className="about-text lc-profile-muted">No approved reviews yet.</p>
+        ) : null}
+
+        <ul className="lc-review-list">
+          {list.map((rv, rvi) => (
+            <li
+              key={rv.id ?? rv._id ?? `rv-${rvi}`}
+              className="lc-review-card lc-glass-mini"
+            >
+              <div className="lc-review-card-head">
+                <UserAvatar
+                  user={{
+                    fullName: rv.author?.fullName || "Reviewer",
+                    profileImage: rv.author?.profileImage,
+                  }}
+                  size={42}
+                />
+                <div>
+                  <h4>{rv.title || "Review"}</h4>
+                  <p className="lc-review-meta">
+                    {rv.author?.fullName || "Member"} ·{" "}
+                    {formatRelativeTime(rv.createdAt) || ""}
+                  </p>
+                  <span
+                    className="lc-review-stars-mini"
+                    aria-label={`Rating ${rv.rating}`}
+                  >
+                    {"★".repeat(Number(rv.rating) || 0)}
+                    {"☆".repeat(
+                      Math.max(0, 5 - Number(rv.rating || 0))
+                    )}
+                  </span>
+                </div>
+              </div>
+              <p className="lc-review-body">{rv.comment}</p>
+              {rv.interviewExperience ? (
+                <p className="lc-review-interview">
+                  <strong>Interview experience:</strong> {rv.interviewExperience}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+
+        {loggedIn && viewerRole === "candidate" && !sameAsViewer ? (
+          <form
+            className="lc-review-submit-form lc-glass-mini"
+            onSubmit={submitCompanyReview}
+          >
+            <h4>Share your interview experience</h4>
+            <p className="lc-profile-muted">
+              Reviews publish after moderator approval — one review per company.
+            </p>
+            <label className="lc-review-field">
+              Rating
+              <select
+                value={reviewForm.rating}
+                disabled={reviewSaving}
+                onChange={(e) =>
+                  setReviewForm((f) => ({
+                    ...f,
+                    rating: Number(e.target.value),
+                  }))
+                }
+              >
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={n}>
+                    {n}/5 stars
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="lc-review-field">
+              Title
+              <input
+                type="text"
+                value={reviewForm.title}
+                disabled={reviewSaving}
+                onChange={(e) =>
+                  setReviewForm((f) => ({ ...f, title: e.target.value }))
+                }
+                maxLength={255}
+              />
+            </label>
+            <label className="lc-review-field">
+              Comment
+              <textarea
+                rows={4}
+                value={reviewForm.comment}
+                disabled={reviewSaving}
+                onChange={(e) =>
+                  setReviewForm((f) => ({ ...f, comment: e.target.value }))
+                }
+              />
+            </label>
+            <label className="lc-review-field">
+              Interview details (optional)
+              <textarea
+                rows={2}
+                value={reviewForm.interviewExperience}
+                disabled={reviewSaving}
+                onChange={(e) =>
+                  setReviewForm((f) => ({
+                    ...f,
+                    interviewExperience: e.target.value,
+                  }))
+                }
+              />
+            </label>
+            <button type="submit" className="primary-btn" disabled={reviewSaving}>
+              {reviewSaving ? "Submitting…" : "Submit review"}
+            </button>
+          </form>
+        ) : null}
+      </div>
+    );
+  };
+
   const innerProfile = (
     <>
       <div
@@ -913,6 +1446,20 @@ function ProfilePage() {
         {companyProfileNotice ? (
           <div className="lc-profile-save-banner" role="status">
             {companyProfileNotice}
+          </div>
+        ) : null}
+        {fetchError ? (
+          <div className="feed-notice" role="alert" style={{ marginBottom: 12 }}>
+            <strong>Profile not found or could not load.</strong>{" "}
+            {safeUiString(fetchError, "")}
+            <button
+              type="button"
+              className="outline-btn"
+              style={{ marginLeft: 10 }}
+              onClick={() => void reloadProfile()}
+            >
+              Retry
+            </button>
           </div>
         ) : null}
         <div className="profile-header-card lc-company-profile-card">
@@ -958,14 +1505,38 @@ function ProfilePage() {
                 </div>
 
                 <div className="company-main-info">
-                  <div className="company-name-row">
+                  <div className="company-name-row lc-company-name-row">
                     <h1>{companyName}</h1>
-                    <span className="verified-icon">✓</span>
+                    {isCoVerified ? <VerifiedCompanyBadge /> : null}
                     <span className="company-badge">Company</span>
                   </div>
 
-                  <p className="company-category">{industry}</p>
-                  <p className="company-location">📍 {location}</p>
+                  <p className="company-category">
+                    {industry ? (
+                      industry
+                    ) : loggedIn &&
+                      viewerRole === "company" &&
+                      sameAsViewer ? (
+                      <span className="lc-profile-muted">
+                        Add your industry in Edit Profile
+                      </span>
+                    ) : (
+                      <span className="lc-profile-muted">—</span>
+                    )}
+                  </p>
+                  <p className="company-location">
+                    {location ? (
+                      <>📍 {location}</>
+                    ) : loggedIn &&
+                      viewerRole === "company" &&
+                      sameAsViewer ? (
+                      <span className="lc-profile-muted">
+                        Add your headquarters in Edit Profile
+                      </span>
+                    ) : (
+                      <span className="lc-profile-muted">—</span>
+                    )}
+                  </p>
                 </div>
               </div>
 
@@ -1026,12 +1597,37 @@ function ProfilePage() {
             >
               Open Jobs
             </button>
+
+            <button
+              type="button"
+              className={
+                activeTab === "reviews" ? "profile-tab active" : "profile-tab"
+              }
+              onClick={() => setActiveTab("reviews")}
+            >
+              Reviews
+            </button>
           </div>
 
           {activeTab === "about" && renderAbout()}
           {activeTab === "posts" && renderPosts()}
           {activeTab === "jobs" && renderJobs()}
+          {activeTab === "reviews" && renderReviews()}
         </div>
+
+        <ReportContentModal
+          open={reportCompanyOpen}
+          onClose={() => setReportCompanyOpen(false)}
+          targetType="company"
+          targetId={profileNumericId}
+          title="Report this company"
+          onSubmitted={() => {
+            setReportCompanyOpen(false);
+            setCompanyProfileNotice(
+              "Thanks — moderators received your report."
+            );
+          }}
+        />
       </div>
     </>
   );
@@ -1112,78 +1708,23 @@ function ProfilePage() {
 
   /** ---- Candidate shell (Dashboard / Feed / Find Jobs…) ---- */
   if (viewerRole === "candidate") {
-    const spec = viewer?.specialization || "";
+    const spec = safeUiString(viewer?.specialization, "");
     return (
       <div className="candidate-page">
-        <header className="topbar">
-          <div className="topbar-left">
-            <div
-              className="brand-mark"
-              role="button"
-              tabIndex={0}
-              onClick={goRoleHome}
-            >
-              <div className="brand-center"></div>
-            </div>
-
-            <div className="top-search">
-              <span>⌕</span>
-              <input
-                type="text"
-                placeholder="Search jobs, companies..."
-                value={topSearch}
-                onChange={(e) => setTopSearch(e.target.value)}
-                onKeyDown={handleTopSearchKeyDown}
-              />
-            </div>
-          </div>
-
-          <div className="topbar-right">
-            <div
-              className="top-nav"
-              role="button"
-              tabIndex={0}
-              onClick={goRoleHome}
-            >
-              <span>⌂</span>
-              <p>Home</p>
-            </div>
-
-            <div
-              className="top-nav lc-msg-nav-active"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/messages")}
-            >
-              <span>✉</span>
-              <p>Messaging</p>
-              {messagesUnread > 0 ? (
-                <div className="notif-badge msg-top-badge">{messagesUnread}</div>
-              ) : null}
-            </div>
-
-            <div
-              className="top-nav notif-nav"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/notifications")}
-            >
-              <span>🔔</span>
-              <p>Notifications</p>
-              <div className="notif-badge">{notifUnread}</div>
-            </div>
-
-            <div className="top-divider"></div>
-
-            <div className="top-user">
-              <UserAvatar user={viewer} size={40} />
-              <div>
-                <h4>{displayNameFromUser(viewer)}</h4>
-                <p>{spec || "Candidate"}</p>
-              </div>
-            </div>
-          </div>
-        </header>
+        <AppTopbar
+          user={viewer}
+          searchPlaceholder="Search jobs, companies..."
+          searchValue={topSearch}
+          onSearchChange={(e) => setTopSearch(e.target.value)}
+          onSearchKeyDown={handleTopSearchKeyDown}
+          notifUnread={notifUnread}
+          messagesUnread={messagesUnread}
+          onLogoClick={goRoleHome}
+          onHomeClick={goRoleHome}
+          onMessagesClick={() => navigate("/messages")}
+          onNotificationsClick={() => navigate("/notifications")}
+          subtitle={spec || "Candidate"}
+        />
 
         <div className="layout">
           <CandidateSidebar
@@ -1194,7 +1735,7 @@ function ProfilePage() {
             onDashboard={() =>
               navigate("/candidate-dashboard", { state: { tab: "dashboard" } })
             }
-            onFeed={() => navigate("/dashboard")}
+            onFeed={() => navigate(FEED_PATH)}
             onFindJobs={() =>
               navigate("/candidate-dashboard", { state: { tab: "findJobs" } })
             }
@@ -1214,7 +1755,10 @@ function ProfilePage() {
             }}
             onSignOut={signOut}
           />
-          <main className="main-content">{innerProfile}</main>
+          <main className="main-content lc-candidate-profile-shell">
+            {innerProfile}
+          </main>
+          <DashboardRail />
         </div>
       </div>
     );
@@ -1222,86 +1766,24 @@ function ProfilePage() {
 
   /** ---- Company shell ---- */
   if (viewerRole === "company") {
-    const cn =
-      displayNameFromUser(viewer) ||
-      viewer?.companyName ||
-      viewer?.email ||
-      "Company";
     const sidebarKey = sameAsViewer ? "myProfile" : "dashboard";
     return (
       <>
         <div className="candidate-page">
-          <header className="topbar">
-            <div className="topbar-left">
-              <div
-                className="brand-mark"
-                role="button"
-                tabIndex={0}
-                onClick={goRoleHome}
-                onKeyDown={(ev) => ev.key === "Enter" && goRoleHome()}
-              >
-                <div className="brand-center"></div>
-              </div>
-
-              <div className="top-search">
-                <span>⌕</span>
-                <input
-                  type="text"
-                  placeholder="Search jobs, companies..."
-                  value={topSearch}
-                  onChange={(e) => setTopSearch(e.target.value)}
-                  onKeyDown={handleTopSearchKeyDown}
-                />
-              </div>
-            </div>
-
-            <div className="topbar-right">
-              <div
-                className="top-nav"
-                role="button"
-                tabIndex={0}
-                onClick={goRoleHome}
-                onKeyDown={(ev) => ev.key === "Enter" && goRoleHome()}
-              >
-                <span>⌂</span>
-                <p>Home</p>
-              </div>
-
-              <div
-                className="top-nav lc-msg-nav-active"
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate("/messages")}
-              >
-                <span>✉</span>
-                <p>Messaging</p>
-                {messagesUnread > 0 ? (
-                  <div className="notif-badge msg-top-badge">{messagesUnread}</div>
-                ) : null}
-              </div>
-
-              <div
-                className="top-nav notif-nav"
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate("/notifications")}
-              >
-                <span>🔔</span>
-                <p>Notifications</p>
-                <div className="notif-badge">{notifUnread}</div>
-              </div>
-
-              <div className="top-divider"></div>
-
-              <div className="top-user">
-                <UserAvatar user={viewer} name={cn} size={40} />
-                <div>
-                  <h4>{cn}</h4>
-                  <p>Company</p>
-                </div>
-              </div>
-            </div>
-          </header>
+          <AppTopbar
+            user={viewer}
+            searchPlaceholder="Search jobs, companies..."
+            searchValue={topSearch}
+            onSearchChange={(e) => setTopSearch(e.target.value)}
+            onSearchKeyDown={handleTopSearchKeyDown}
+            notifUnread={notifUnread}
+            messagesUnread={messagesUnread}
+            onLogoClick={goRoleHome}
+            onHomeClick={goRoleHome}
+            onMessagesClick={() => navigate("/messages")}
+            onNotificationsClick={() => navigate("/notifications")}
+            subtitle="Company"
+          />
 
           <div className="layout">
             <CandidateSidebar
@@ -1313,7 +1795,7 @@ function ProfilePage() {
               onDashboard={() =>
                 navigate("/company-dashboard", { state: { tab: "dashboard" } })
               }
-              onFeed={() => navigate("/dashboard")}
+              onFeed={() => navigate(FEED_PATH)}
               onMyJobs={() =>
                 navigate("/company-dashboard", { state: { tab: "jobs" } })
               }
@@ -1330,7 +1812,10 @@ function ProfilePage() {
               onSavedJobs={() => {}}
               onSignOut={signOut}
             />
-            <main className="main-content">{innerProfile}</main>
+            <main className="main-content lc-candidate-profile-shell">
+              {innerProfile}
+            </main>
+            <DashboardRail />
           </div>
         </div>
 
@@ -1583,7 +2068,7 @@ function ProfilePage() {
               <button
                 type="button"
                 className="admin-side-link"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate(FEED_PATH)}
               >
                 <span>◫</span>
                 Feed

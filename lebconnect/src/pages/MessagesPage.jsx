@@ -6,8 +6,17 @@ import AppSidebar from "../components/AppSidebar";
 import CandidateSidebar from "../components/CandidateSidebar";
 import UserAvatar from "../components/UserAvatar";
 import { formatRelativeTime } from "../utils/format";
-import { displayNameFromUser } from "../utils/avatar";
-import { dashboardPath, getUser, logout } from "../utils/auth";
+import { dashboardPath, FEED_PATH, getUser, logout } from "../utils/auth";
+import {
+  ADMIN_DASHBOARD_PATH,
+  ADMIN_MESSAGES_PATH,
+  ADMIN_NOTIFICATIONS_PATH,
+  adminDashboardPathForTab,
+} from "../utils/adminNav";
+import { motion } from "framer-motion";
+
+import { lcMotionPage } from "../utils/motionProps";
+import "./Dashboard.css";
 import "./MessagesPage.css";
 import "./CandidateDashboard.css";
 import "./AdminDashboard.css";
@@ -63,8 +72,6 @@ function mapPeekToPartner(peek, rawId) {
   };
 }
 
-const ADMIN_MESSAGES_PATH = "/admin/messages";
-
 function MessagesInner() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,7 +81,7 @@ function MessagesInner() {
   const role = me?.role;
 
   useEffect(() => {
-    if (role === "admin" && location.pathname === "/messages") {
+    if (role === "admin" && location.pathname === "/admin/messages") {
       navigate(`${ADMIN_MESSAGES_PATH}${location.search || ""}`, { replace: true });
     }
   }, [role, location.pathname, location.search, navigate]);
@@ -271,7 +278,6 @@ function MessagesInner() {
   }, [mergedConversationRows, selectedPartnerId, peekPartner]);
 
   const spec = me?.specialization || "";
-  const companyNameViewer = me?.companyName || me?.email || "Company";
 
   const signOut = () => {
     logout();
@@ -507,78 +513,23 @@ function MessagesInner() {
   /** ---- Candidate layout ---- */
   if (role === "candidate") {
     return (
-      <div className="candidate-page">
-        <header className="topbar">
-          <div className="topbar-left">
-            <div
-              className="brand-mark"
-              role="button"
-              tabIndex={0}
-              onClick={goRoleHome}
-            >
-              <div className="brand-center"></div>
-            </div>
+      <motion.div className="candidate-page" {...lcMotionPage()}>
+        <AppTopbar
+          user={me}
+          searchPlaceholder="Search jobs, companies..."
+          searchValue={topSearch}
+          onSearchChange={(e) => setTopSearch(e.target.value)}
+          onSearchKeyDown={handleTopSearchKeyDown}
+          notifUnread={notifUnread}
+          messagesUnread={msgUnreadTotal}
+          onLogoClick={goRoleHome}
+          onHomeClick={goRoleHome}
+          onMessagesClick={() => navigate("/messages")}
+          onNotificationsClick={() => navigate("/notifications")}
+          subtitle={spec || "Candidate"}
+        />
 
-            <div className="top-search">
-              <span>⌕</span>
-              <input
-                type="text"
-                placeholder="Search jobs, companies..."
-                value={topSearch}
-                onChange={(e) => setTopSearch(e.target.value)}
-                onKeyDown={handleTopSearchKeyDown}
-              />
-            </div>
-          </div>
-
-          <div className="topbar-right">
-            <div
-              className="top-nav"
-              role="button"
-              tabIndex={0}
-              onClick={goRoleHome}
-            >
-              <span>⌂</span>
-              <p>Home</p>
-            </div>
-
-            <div
-              className="top-nav lc-msg-nav-active"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/messages")}
-            >
-              <span>✉</span>
-              <p>Messaging</p>
-              {msgUnreadTotal > 0 ? (
-                <div className="notif-badge msg-top-badge">{msgUnreadTotal}</div>
-              ) : null}
-            </div>
-
-            <div
-              className="top-nav notif-nav"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/notifications")}
-            >
-              <span>🔔</span>
-              <p>Notifications</p>
-              <div className="notif-badge">{notifUnread}</div>
-            </div>
-
-            <div className="top-divider"></div>
-
-            <div className="top-user">
-              <UserAvatar user={me} size={40} />
-              <div>
-                <h4>{displayNameFromUser(me)}</h4>
-                <p>{spec || "Candidate"}</p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="layout">
+        <div className="dashboard-body">
           <CandidateSidebar
             user={me}
             activeKey="messages"
@@ -587,7 +538,7 @@ function MessagesInner() {
             onDashboard={() =>
               navigate("/candidate-dashboard", { state: { tab: "dashboard" } })
             }
-            onFeed={() => navigate("/dashboard")}
+            onFeed={() => navigate(FEED_PATH)}
             onFindJobs={() =>
               navigate("/candidate-dashboard", { state: { tab: "findJobs" } })
             }
@@ -607,87 +558,30 @@ function MessagesInner() {
           />
           {messagesPanel}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   /** ---- Company layout ---- */
   if (role === "company") {
     return (
-      <div className="candidate-page">
-        <header className="topbar">
-          <div className="topbar-left">
-            <div
-              className="brand-mark"
-              role="button"
-              tabIndex={0}
-              onClick={goRoleHome}
-              onKeyDown={(e) => e.key === "Enter" && goRoleHome()}
-            >
-              <div className="brand-center"></div>
-            </div>
+      <motion.div className="candidate-page" {...lcMotionPage()}>
+        <AppTopbar
+          user={me}
+          searchPlaceholder="Search jobs, companies..."
+          searchValue={topSearch}
+          onSearchChange={(e) => setTopSearch(e.target.value)}
+          onSearchKeyDown={handleTopSearchKeyDown}
+          notifUnread={notifUnread}
+          messagesUnread={msgUnreadTotal}
+          onLogoClick={goRoleHome}
+          onHomeClick={goRoleHome}
+          onMessagesClick={() => navigate("/messages")}
+          onNotificationsClick={() => navigate("/notifications")}
+          subtitle="Company"
+        />
 
-            <div className="top-search">
-              <span>⌕</span>
-              <input
-                type="text"
-                placeholder="Search jobs, companies..."
-                value={topSearch}
-                onChange={(e) => setTopSearch(e.target.value)}
-                onKeyDown={handleTopSearchKeyDown}
-              />
-            </div>
-          </div>
-
-          <div className="topbar-right">
-            <div
-              className="top-nav"
-              role="button"
-              tabIndex={0}
-              onClick={goRoleHome}
-              onKeyDown={(e) => e.key === "Enter" && goRoleHome()}
-            >
-              <span>⌂</span>
-              <p>Home</p>
-            </div>
-
-            <div
-              className="top-nav lc-msg-nav-active"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/messages")}
-            >
-              <span>✉</span>
-              <p>Messaging</p>
-              {msgUnreadTotal > 0 ? (
-                <div className="notif-badge msg-top-badge">{msgUnreadTotal}</div>
-              ) : null}
-            </div>
-
-            <div
-              className="top-nav notif-nav"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate("/notifications")}
-            >
-              <span>🔔</span>
-              <p>Notifications</p>
-              <div className="notif-badge">{notifUnread}</div>
-            </div>
-
-            <div className="top-divider"></div>
-
-            <div className="top-user">
-              <UserAvatar user={me} name={companyNameViewer} size={40} />
-              <div>
-                <h4>{companyNameViewer}</h4>
-                <p>Company</p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="layout">
+        <div className="dashboard-body">
           <CandidateSidebar
             variant="company"
             user={me}
@@ -697,7 +591,7 @@ function MessagesInner() {
             onDashboard={() =>
               navigate("/company-dashboard", { state: { tab: "dashboard" } })
             }
-            onFeed={() => navigate("/dashboard")}
+            onFeed={() => navigate(FEED_PATH)}
             onMyJobs={() =>
               navigate("/company-dashboard", { state: { tab: "jobs" } })
             }
@@ -717,16 +611,16 @@ function MessagesInner() {
           />
           {messagesPanel}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   /** ---- Admin layout ---- */
   if (role === "admin") {
-    const goDash = () => navigate("/admin-dashboard");
+    const goDash = () => navigate(ADMIN_DASHBOARD_PATH);
 
     return (
-      <div className="candidate-page admin-app-page">
+      <motion.div className="candidate-page admin-app-page" {...lcMotionPage()}>
         <AppTopbar
           user={me}
           subtitle="Administrator"
@@ -740,26 +634,27 @@ function MessagesInner() {
           onLogoClick={goDash}
           onHomeClick={goDash}
           onMessagesClick={() => navigate(ADMIN_MESSAGES_PATH)}
-          onNotificationsClick={() => navigate("/notifications")}
+          onNotificationsClick={() => navigate(ADMIN_NOTIFICATIONS_PATH)}
         />
 
-        <div className="layout">
+        <div className="dashboard-body">
           <AppSidebar
             user={me}
             activeSection="messages"
             notifUnread={notifUnread}
             messagesUnread={msgUnreadTotal}
             onDashboard={goDash}
-            onUsers={() => navigate("/admin-dashboard?tab=users")}
-            onJobs={() => navigate("/admin-dashboard?tab=jobs")}
-            onComplaints={() => navigate("/admin-dashboard?tab=complaints")}
+            onUsers={() => navigate(adminDashboardPathForTab("users"))}
+            onJobs={() => navigate(adminDashboardPathForTab("jobs"))}
+            onComplaints={() => navigate(adminDashboardPathForTab("complaints"))}
+            onModeration={() => navigate(adminDashboardPathForTab("moderation"))}
             onMessages={() => navigate(ADMIN_MESSAGES_PATH)}
-            onNotifications={() => navigate("/notifications")}
+            onNotifications={() => navigate(ADMIN_NOTIFICATIONS_PATH)}
             onSignOut={signOut}
           />
           {messagesPanel}
         </div>
-      </div>
+      </motion.div>
     );
   }
 

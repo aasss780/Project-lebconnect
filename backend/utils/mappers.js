@@ -43,6 +43,9 @@ function mapUser(row) {
     skills: parseJson(row.skills, []),
     education: parseJson(row.education, []),
     experience: parseJson(row.experience, []),
+    candidateCv: sqlTextCell(row.candidate_cv),
+    candidateCvFileName: row.candidate_cv_file_name ?? null,
+    candidateCvText: sqlTextCell(row.candidate_cv_text),
     profileImage: sqlTextCell(row.profile_image),
     companyName: row.company_name,
     industry: row.industry,
@@ -51,6 +54,7 @@ function mapUser(row) {
     website: row.website,
     logo: sqlTextCell(row.logo),
     coverImage: sqlTextCell(row.cover_image),
+    isVerified: Boolean(row.is_verified),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -61,6 +65,13 @@ function mapUserPublic(row) {
   const u = mapUser(row);
   if (u) delete u.email;
   return u;
+}
+
+/** Avoid stuffing multi‑MB CV payloads into JWT session JSON on login / profile patch. */
+function userForClientSession(u) {
+  if (!u || typeof u !== "object") return u;
+  const { candidateCv: _cv, candidateCvText: _txt, ...rest } = u;
+  return rest;
 }
 
 function mapCompanyEmbed(row) {
@@ -121,6 +132,7 @@ function mapJobJoined(row) {
     industry: row.company_industry,
     location: row.company_location,
     logo: row.company_logo,
+    company_is_verified: row.company_is_verified,
   };
   return mapJob(jobRow, companyRow);
 }
@@ -130,6 +142,7 @@ module.exports = {
   sqlTextCell,
   mapUser,
   mapUserPublic,
+  userForClientSession,
   mapCompanyEmbed,
   mapJob,
   mapJobJoined,

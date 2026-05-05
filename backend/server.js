@@ -16,6 +16,14 @@ const complaintRoutes = require("./routes/complaintRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const siteReviewRoutes = require("./routes/siteReviewRoutes");
+const savedSearchRoutes = require("./routes/savedSearchRoutes");
+const interviewRoutes = require("./routes/interviewRoutes");
+const projectRoutes = require("./routes/projectRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const networkRoutes = require("./routes/networkRoutes");
+const cvRoutes = require("./routes/cvRoutes");
+const companyPublicRoutes = require("./routes/companyPublicRoutes");
+const companyAnalyticsRoutes = require("./routes/companyAnalyticsRoutes");
 
 const {
   getHomeStats,
@@ -26,14 +34,14 @@ const { getLatestJobs } = require("./controllers/jobController");
 
 const app = express();
 
+const devOrigins = [];
+for (let p = 5173; p <= 5180; p++) {
+  devOrigins.push(`http://localhost:${p}`, `http://127.0.0.1:${p}`);
+}
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:5175",
-      "http://localhost:5176",
-    ],
+    origin: devOrigins,
     credentials: true,
   })
 );
@@ -68,6 +76,14 @@ app.use("/api/complaints", complaintRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/site-reviews", siteReviewRoutes);
+app.use("/api/saved-searches", savedSearchRoutes);
+app.use("/api/interviews", interviewRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/network", networkRoutes);
+app.use("/api/cv", cvRoutes);
+app.use("/api/companies", companyPublicRoutes);
+app.use("/api/company/analytics", companyAnalyticsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });

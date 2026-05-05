@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+
+import { lcMotionPage } from "../utils/motionProps";
+import ThemeToggle from "../components/ThemeToggle";
 import "./ChooseRole.css";
 
 function ChooseRole() {
@@ -7,12 +11,24 @@ function ChooseRole() {
   const navigate = useNavigate();
 
   return (
-    <div className="choose-role-page">
+    <motion.div className="choose-role-page" {...lcMotionPage(20)}>
+      <div className="lc-auth-theme-corner">
+        <ThemeToggle solid />
+      </div>
       <div className="left-panel">
         <div className="left-overlay"></div>
 
         <div className="left-content">
-          <div className="top-white-dot"></div>
+          <div
+            className="brand-mark auth-shell-brand"
+            role="button"
+            tabIndex={0}
+            aria-label="LebConnect Home"
+            onClick={() => navigate("/")}
+            onKeyDown={(e) => e.key === "Enter" && navigate("/")}
+          >
+            <div className="brand-center" />
+          </div>
 
           <div className="join-badge">
             <span className="join-badge-dot"></span>
@@ -46,7 +62,7 @@ function ChooseRole() {
                   />
                 </svg>
               </div>
-              <span>Browse 5,400+ job listings</span>
+              <span>Browse real job listings from Lebanese employers</span>
             </div>
 
             <div className="feature-item">
@@ -111,26 +127,9 @@ function ChooseRole() {
             </div>
           </div>
 
-          <div className="bottom-joined">
-            <div className="avatars">
-              <img
-                src="https://randomuser.me/api/portraits/men/32.jpg"
-                alt="avatar1"
-              />
-              <img
-                src="https://randomuser.me/api/portraits/women/44.jpg"
-                alt="avatar2"
-              />
-              <img
-                src="https://randomuser.me/api/portraits/men/67.jpg"
-                alt="avatar3"
-              />
-            </div>
-
-            <p>
-              <strong>220+ professionals</strong> joined this week
-            </p>
-          </div>
+          <p className="auth-left-trust-muted">
+            One account path for talent, one for employers — choose the journey that fits you.
+          </p>
         </div>
       </div>
 
@@ -150,7 +149,9 @@ function ChooseRole() {
             <p className="subtitle">Choose how you want to join</p>
 
             <div
-              className={`role-card ${selectedRole === "jobseeker" ? "active" : ""}`}
+              className={`role-card lc-role-card lc-role-card--seeker ${
+                selectedRole === "jobseeker" ? "active" : ""
+              }`}
               role="button"
               tabIndex={0}
               onClick={() => setSelectedRole("jobseeker")}
@@ -160,7 +161,7 @@ function ChooseRole() {
                   setSelectedRole("jobseeker");
               }}
             >
-            <div className="role-card-left">
+              <div className="role-card-left">
               <div className="role-icon role-icon-blue">
                 <svg viewBox="0 0 24 24" fill="none">
                   <circle
@@ -183,19 +184,21 @@ function ChooseRole() {
                 <h3>I&apos;m a Job Seeker</h3>
                 <p>Find jobs, build your profile, get hired</p>
               </div>
+              </div>
+
+              <div
+                className={`check-circle ${
+                  selectedRole === "jobseeker" ? "checked" : ""
+                }`}
+              >
+                {selectedRole === "jobseeker" && "✓"}
+              </div>
             </div>
 
             <div
-              className={`check-circle ${
-                selectedRole === "jobseeker" ? "checked" : ""
+              className={`role-card lc-role-card lc-role-card--company ${
+                selectedRole === "company" ? "active" : ""
               }`}
-            >
-              {selectedRole === "jobseeker" && "✓"}
-            </div>
-          </div>
-
-            <div
-              className={`role-card ${selectedRole === "company" ? "active" : ""}`}
               role="button"
               tabIndex={0}
               onClick={() => setSelectedRole("company")}
@@ -205,8 +208,8 @@ function ChooseRole() {
                   setSelectedRole("company");
               }}
             >
-            <div className="role-card-left">
-              <div className="role-icon role-icon-gray">
+              <div className="role-card-left">
+              <div className="role-icon role-icon-company">
                 <svg viewBox="0 0 24 24" fill="none">
                   <path
                     d="M6 20V8H18V20"
@@ -249,43 +252,15 @@ function ChooseRole() {
                 <h3>I&apos;m Hiring / a Company</h3>
                 <p>Post jobs, find talent, grow your team</p>
               </div>
-            </div>
+              </div>
 
-            <div
-              className={`check-circle ${
-                selectedRole === "company" ? "checked" : ""
-              }`}
-            >
-              {selectedRole === "company" && "✓"}
-            </div>
-            </div>
-
-            <div className="or-divider or-divider--compact">
-              <span></span>
-              <p>or sign up with</p>
-              <span></span>
-            </div>
-
-            <div className="social-row social-row--compact">
-              <button
-                type="button"
-                className="social-btn lc-disabled-nav"
-                disabled
-                title="OAuth is not configured for this demo"
+              <div
+                className={`check-circle ${
+                  selectedRole === "company" ? "checked" : ""
+                }`}
               >
-                <span className="social-icon google-icon">G</span>
-                <span>Google</span>
-              </button>
-
-              <button
-                type="button"
-                className="social-btn lc-disabled-nav"
-                disabled
-                title="OAuth is not configured for this demo"
-              >
-                <span className="social-icon linkedin-icon">in</span>
-                <span>LinkedIn</span>
-              </button>
+                {selectedRole === "company" && "✓"}
+              </div>
             </div>
 
             <p className="signin-text signin-text--choose">
@@ -319,7 +294,7 @@ function ChooseRole() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

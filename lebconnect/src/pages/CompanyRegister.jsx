@@ -3,15 +3,26 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import ErrorMessage from "../components/ErrorMessage";
 import CategoryPicker from "../components/CategoryPicker";
+import { useToast } from "../context/ToastContext";
 import {
   composeIndustryErrors,
   OTHER_LABEL,
 } from "../constants/categories";
+import { motion } from "framer-motion";
+
+import { lcMotionPage } from "../utils/motionProps";
+import ThemeToggle from "../components/ThemeToggle";
+import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
+import { analyzePasswordStrength } from "../utils/passwordStrength";
 import "./Register.css";
 import "./CompanyRegister.css";
 
+const MIN_PASSWORD = 6;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function CompanyRegister() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [form, setForm] = useState({
     companyName: "",
     email: "",
@@ -24,6 +35,11 @@ function CompanyRegister() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({
+    companyName: "",
+    email: "",
+    location: "",
+    password: "",
+    confirmPassword: "",
     indCat: "",
     indCust: "",
   });
@@ -31,12 +47,24 @@ function CompanyRegister() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setFieldErrors({ indCat: "", indCust: "" });
+    const next = {
+      companyName: "",
+      email: "",
+      location: "",
+      password: "",
+      confirmPassword: "",
+      indCat: "",
+      indCust: "",
+    };
+
     const companyName = form.companyName.trim();
     const email = form.email.trim();
     const location = form.location.trim();
@@ -44,27 +72,39 @@ function CompanyRegister() {
       form.industryCategory,
       form.industryOther
     );
-    if (catErr.category || catErr.custom) {
-      setFieldErrors({ indCat: catErr.category, indCust: catErr.custom });
-      return;
+    next.indCat = catErr.category || "";
+    next.indCust = catErr.custom || "";
+
+    if (!companyName) next.companyName = "Please enter your company name.";
+    else if (companyName.length < 2)
+      next.companyName = "Use at least 2 characters for the company name.";
+
+    if (!email) next.email = "Please enter your email.";
+    else if (!EMAIL_RE.test(email))
+      next.email = "Enter a valid email address.";
+
+    if (!location) next.location = "Please enter a location.";
+    else if (location.length < 2)
+      next.location = "Use at least 2 characters for location.";
+
+    if (!form.password) next.password = "Please choose a password.";
+    else if (form.password.length < MIN_PASSWORD)
+      next.password = `Use at least ${MIN_PASSWORD} characters.`;
+    else if (analyzePasswordStrength(form.password).score === 0) {
+      next.password = "Please use a stronger password.";
     }
+
+    if (!form.confirmPassword)
+      next.confirmPassword = "Please confirm your password.";
+    else if (form.password !== form.confirmPassword)
+      next.confirmPassword = "Passwords do not match.";
+
+    setFieldErrors(next);
+    if (Object.values(next).some(Boolean)) return;
+
     const industryOther =
       form.industryCategory === OTHER_LABEL ? form.industryOther.trim() : "";
-    if (
-      !companyName ||
-      !email ||
-      !form.industryCategory ||
-      !location ||
-      !form.password ||
-      !form.confirmPassword
-    ) {
-      setError("Please fill in all fields.");
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+
     setLoading(true);
     try {
       await api.post("/api/auth/register/company", {
@@ -75,6 +115,7 @@ function CompanyRegister() {
         industryOther,
         location,
       });
+      toast.success("Company account created. Sign in to continue.");
       navigate("/login");
     } catch (err) {
       const msg =
@@ -88,12 +129,24 @@ function CompanyRegister() {
   };
 
   return (
-    <div className="register-page company-register-page">
+    <motion.div className="register-page company-register-page" {...lcMotionPage(20)}>
+      <div className="lc-auth-theme-corner">
+        <ThemeToggle solid />
+      </div>
       <div className="register-left">
         <div className="register-overlay"></div>
 
         <div className="register-left-content">
-          <div className="top-white-dot"></div>
+          <div
+            className="brand-mark auth-shell-brand"
+            role="button"
+            tabIndex={0}
+            aria-label="LebConnect Home"
+            onClick={() => navigate("/")}
+            onKeyDown={(e) => e.key === "Enter" && navigate("/")}
+          >
+            <div className="brand-center" />
+          </div>
 
           <div className="join-badge">
             <span className="join-badge-dot"></span>
@@ -107,8 +160,8 @@ function CompanyRegister() {
           </h1>
 
           <p className="hero-text">
-            Join thousands of Lebanese professionals who found their next
-            opportunity through our platform.
+            Publish roles, manage applicants, and grow your team — built for Lebanese
+            hiring teams who need a single place to connect with talent.
           </p>
 
           <div className="features-list">
@@ -151,26 +204,9 @@ function CompanyRegister() {
             </div>
           </div>
 
-          <div className="bottom-joined">
-            <div className="avatars">
-              <img
-                src="https://randomuser.me/api/portraits/men/32.jpg"
-                alt="avatar1"
-              />
-              <img
-                src="https://randomuser.me/api/portraits/women/44.jpg"
-                alt="avatar2"
-              />
-              <img
-                src="https://randomuser.me/api/portraits/men/67.jpg"
-                alt="avatar3"
-              />
-            </div>
-
-            <p>
-              <strong>220+ professionals</strong> joined this week
-            </p>
-          </div>
+          <p className="auth-left-trust-muted">
+            Post real roles and reach verified candidates — no demo credentials on sign-in.
+          </p>
         </div>
       </div>
 
@@ -201,25 +237,41 @@ function CompanyRegister() {
           <ErrorMessage message={error} onDismiss={() => setError("")} />
 
           <form className="register-form" onSubmit={handleSubmit}>
-            <label>Company name</label>
+            <label htmlFor="co-name">Company name</label>
             <input
+              id="co-name"
               name="companyName"
               type="text"
               placeholder="Your company name"
               value={form.companyName}
               onChange={handleChange}
-              required
+              className={fieldErrors.companyName ? "lc-input-has-error" : ""}
+              autoComplete="organization"
+              aria-invalid={!!fieldErrors.companyName}
             />
+            {fieldErrors.companyName ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.companyName}
+              </span>
+            ) : null}
 
-            <label>Email Address</label>
+            <label htmlFor="co-email">Email Address</label>
             <input
+              id="co-email"
               name="email"
               type="email"
               placeholder="hr@company.com"
               value={form.email}
               onChange={handleChange}
-              required
+              className={fieldErrors.email ? "lc-input-has-error" : ""}
+              autoComplete="email"
+              aria-invalid={!!fieldErrors.email}
             />
+            {fieldErrors.email ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.email}
+              </span>
+            ) : null}
 
             <CategoryPicker
               variant="company"
@@ -228,44 +280,70 @@ function CompanyRegister() {
               custom={form.industryOther}
               categoryError={fieldErrors.indCat}
               customError={fieldErrors.indCust}
-              onCategoryChange={(v) =>
-                setForm((prev) => ({ ...prev, industryCategory: v }))
-              }
-              onCustomChange={(v) =>
-                setForm((prev) => ({ ...prev, industryOther: v }))
-              }
+              onCategoryChange={(v) => {
+                setForm((prev) => ({ ...prev, industryCategory: v }));
+                setFieldErrors((prev) => ({ ...prev, indCat: "", indCust: "" }));
+              }}
+              onCustomChange={(v) => {
+                setForm((prev) => ({ ...prev, industryOther: v }));
+                setFieldErrors((prev) => ({ ...prev, indCust: "" }));
+              }}
             />
 
-            <label>Location</label>
+            <label htmlFor="co-location">Location</label>
             <input
+              id="co-location"
               name="location"
               type="text"
-              placeholder="Beirut"
+              placeholder="e.g. Beirut"
               value={form.location}
               onChange={handleChange}
-              required
+              className={fieldErrors.location ? "lc-input-has-error" : ""}
+              autoComplete="address-level2"
+              aria-invalid={!!fieldErrors.location}
             />
+            {fieldErrors.location ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.location}
+              </span>
+            ) : null}
 
-            <label>Password</label>
+            <label htmlFor="co-password">Password</label>
             <input
+              id="co-password"
               name="password"
               type="password"
-              placeholder="Min. 8 characters"
+              placeholder={`Minimum ${MIN_PASSWORD} characters`}
               value={form.password}
               onChange={handleChange}
-              required
-              minLength={6}
+              className={fieldErrors.password ? "lc-input-has-error" : ""}
+              autoComplete="new-password"
+              aria-invalid={!!fieldErrors.password}
             />
+            <PasswordStrengthMeter password={form.password} />
+            {fieldErrors.password ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.password}
+              </span>
+            ) : null}
 
-            <label>Confirm Password</label>
+            <label htmlFor="co-confirmPassword">Confirm Password</label>
             <input
+              id="co-confirmPassword"
               name="confirmPassword"
               type="password"
               placeholder="Repeat password"
               value={form.confirmPassword}
               onChange={handleChange}
-              required
+              className={fieldErrors.confirmPassword ? "lc-input-has-error" : ""}
+              autoComplete="new-password"
+              aria-invalid={!!fieldErrors.confirmPassword}
             />
+            {fieldErrors.confirmPassword ? (
+              <span className="lc-inline-error" role="alert">
+                {fieldErrors.confirmPassword}
+              </span>
+            ) : null}
 
             <div className="terms-row">
               <input type="checkbox" required />
@@ -296,7 +374,7 @@ function CompanyRegister() {
           </p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,3 +1,5 @@
+import { initialsFromName } from "./format";
+
 /** Normalize profile / cover image fields from API + localStorage (camelCase + snake_case). */
 
 function normalizeMediaString(v) {
@@ -32,4 +34,17 @@ export function getProfileImage(user) {
 export function getCoverImage(user) {
   if (!user || typeof user !== "object") return "";
   return normalizeMediaString(user.coverImage ?? user.cover_image);
+}
+
+/** Two-letter initials for avatars (handles snake_case names from API). */
+export function getInitials(user) {
+  if (!user || typeof user !== "object") return "?";
+  const label =
+    user.fullName ||
+    user.full_name ||
+    user.companyName ||
+    user.company_name ||
+    user.email ||
+    "Member";
+  return initialsFromName(String(label)).slice(0, 2);
 }

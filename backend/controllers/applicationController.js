@@ -31,6 +31,11 @@ function mapApplication(row, options = {}) {
     _id: row.id,
     id: row.id,
     status: row.status,
+    stage: row.stage || "applied",
+    viewedAt: row.viewed_at || null,
+    interviewDate: row.interview_date || null,
+    interviewLocation: row.interview_location || null,
+    interviewMode: row.interview_mode || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     message: row.message || "",
@@ -107,8 +112,8 @@ async function applyToJob(req, res) {
 
     try {
       const ins = await query(
-        `INSERT INTO applications (candidate_id, job_id, company_id, status, cv, cv_file_name, message)
-         VALUES (?, ?, ?, 'pending', ?, ?, ?)`,
+        `INSERT INTO applications (candidate_id, job_id, company_id, status, stage, cv, cv_file_name, message)
+         VALUES (?, ?, ?, 'pending', 'applied', ?, ?, ?)`,
         [req.user.id, jobIdNum, job.company_id, cv, cvFileName, message || null]
       );
 
@@ -153,6 +158,27 @@ async function listMyApplications(req, res) {
   }
 }
 
+/** Candidate-only: one application with CV body (for “View CV” on dashboard). */
+async function getMyApplicationById(req, res) {
+  try {
+    const aid = Number(req.params.id);
+    if (!Number.isFinite(aid)) {
+      return res.status(400).json({ message: "Invalid application id" });
+    }
+    const rows = await query(`${APP_JOIN} WHERE a.id = ? AND a.candidate_id = ?`, [
+      aid,
+      req.user.id,
+    ]);
+    if (!rows.length) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+    res.json(mapApplication(rows[0]));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to load application", error: err.message });
+  }
+}
+
 async function listApplicationsForJob(req, res) {
   try {
     const jid = Number(req.params.jobId);
@@ -194,7 +220,12 @@ async function updateApplicationStatus(req, res) {
       return res.status(403).json({ message: "Only the employer can update status" });
     }
 
-    await query(`UPDATE applications SET status = ? WHERE id = ?`, [status, aid]);
+    const stageOut = status === "accepted" ? "accepted" : status === "rejected" ? "rejected" : "applied";
+    await query(`UPDATE applications SET status = ?, stage = ? WHERE id = ?`, [
+      status,
+      stageOut,
+      aid,
+    ]);
 
     if (status === "accepted" || status === "rejected") {
       const msg =
@@ -217,11 +248,108 @@ async function updateApplicationStatus(req, res) {
   }
 }
 
+const STAGES = [
+  "applied",
+  "viewed",
+  "shortlisted",
+  "interview",
+  "accepted",
+  "rejected",
+];
+
+async function markApplicationViewed(req, res) {
+  try {
+    const aid = Number(req.params.id);
+    const apps = await query(`${APP_JOIN} WHERE a.id = ?`, [aid]);
+    const row = apps[0];
+    if (!row) return res.status(404).json({ message: "Application not found" });
+    if (row.company_id !== req.user.id) {
+      return res.status(403).json({ message: "Only the employer can mark viewed" });
+    }
+    const nextStage =
+      !row.stage || row.stage === "applied" ? "viewed" : row.stage;
+    const firstView = !row.viewed_at;
+    await query(
+      `UPDATE applications SET viewed_at = COALESCE(viewed_at, NOW()), stage = ? WHERE id = ?`,
+      [nextStage, aid]
+    );
+    const updated = await fetchApplicationById(aid);
+    if (firstView) {
+      await createNotification(row.candidate_id, {
+        title: "Application viewed",
+        message: `Your application for "${row.job_title}" was opened by the company.`,
+        type: "application",
+      });
+    }
+    res.json({ application: mapApplication(updated, { omitCvBody: true }) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update application", error: err.message });
+  }
+}
+
+async function updateApplicationStage(req, res) {
+  try {
+    const stageRaw = String(req.body.stage || "").toLowerCase().trim();
+    if (!STAGES.includes(stageRaw)) {
+      return res.status(400).json({
+        message: `stage must be one of: ${STAGES.join(", ")}`,
+      });
+    }
+
+    const aid = Number(req.params.id);
+    const apps = await query(`${APP_JOIN} WHERE a.id = ?`, [aid]);
+    const row = apps[0];
+    if (!row) return res.status(404).json({ message: "Application not found" });
+    if (row.company_id !== req.user.id) {
+      return res.status(403).json({ message: "Only the employer can update stage" });
+    }
+
+    let status = row.status;
+    if (stageRaw === "accepted") status = "accepted";
+    else if (stageRaw === "rejected") status = "rejected";
+    else status = "pending";
+
+    let sql = `UPDATE applications SET stage = ?, status = ?`;
+    const vals = [stageRaw, status];
+    if (stageRaw !== "applied") {
+      sql += `, viewed_at = COALESCE(viewed_at, NOW())`;
+    }
+    sql += ` WHERE id = ?`;
+    vals.push(aid);
+    await query(sql, vals);
+
+    const labels = {
+      viewed: "Viewed",
+      shortlisted: "Shortlisted",
+      interview: "Interview",
+      accepted: "Accepted",
+      rejected: "Rejected",
+    };
+    if (labels[stageRaw]) {
+      await createNotification(row.candidate_id, {
+        title: "Application update",
+        message: `Your application for "${row.job_title}" is now: ${labels[stageRaw]}.`,
+        type: "application",
+      });
+    }
+
+    const updated = await fetchApplicationById(aid);
+    res.json({ application: mapApplication(updated) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update stage", error: err.message });
+  }
+}
+
 module.exports = {
   applyToJob,
   listMyApplications,
+  getMyApplicationById,
   listApplicationsForJob,
   updateApplicationStatus,
+  markApplicationViewed,
+  updateApplicationStage,
   mapApplication,
   APP_JOIN,
 };

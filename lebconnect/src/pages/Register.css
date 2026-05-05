@@ -5,7 +5,8 @@
   display: flex;
   flex-wrap: nowrap;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--bg);
+  color: var(--text);
   color-scheme: light;
 }
 
@@ -32,8 +33,12 @@
 .register-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(24, 62, 118, 0.58);
-  backdrop-filter: blur(1.6px);
+  background: linear-gradient(
+    155deg,
+    rgba(0, 65, 130, 0.76) 0%,
+    rgba(10, 102, 194, 0.5) 100%
+  );
+  backdrop-filter: blur(2px);
 }
 
 .register-left-content {
@@ -47,16 +52,6 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
-}
-
-.top-white-dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: white;
-  margin-top: 10px;
-  margin-bottom: 12px;
-  flex-shrink: 0;
 }
 
 .join-badge {
@@ -183,7 +178,7 @@
   display: flex;
   align-items: stretch;
   justify-content: center;
-  background: #ffffff;
+  background: var(--card);
   padding: 16px 40px;
   overflow: hidden;
   min-height: 0;
@@ -213,7 +208,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #64748b;
+  color: var(--muted);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -229,14 +224,14 @@
   font-size: 24px;
   line-height: 1.2;
   font-weight: 800;
-  color: #0b1324;
+  color: var(--text);
   margin-bottom: 6px;
   text-align: center;
 }
 
 .account-type {
   font-size: 14px;
-  color: #4b5563;
+  color: var(--muted);
   margin-bottom: 12px;
   text-align: center;
 }
@@ -247,7 +242,7 @@
   padding: 0;
   margin-left: 6px;
   font: inherit;
-  color: #0b72d9;
+  color: var(--primary);
   font-weight: 700;
   cursor: pointer;
   text-decoration: underline;
@@ -255,7 +250,18 @@
 }
 
 .account-type-change:hover {
-  color: #0960c7;
+  color: var(--primary-dark);
+}
+
+.auth-left-trust-muted {
+  margin-top: auto;
+  flex-shrink: 0;
+  padding-top: 8px;
+  padding-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.42;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 500;
 }
 
 .register-form {
@@ -263,10 +269,23 @@
   flex-direction: column;
 }
 
+.register-form .lc-inline-error {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.register-form input.lc-input-has-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+}
+
 .register-form label {
   font-size: 13px;
   font-weight: 700;
-  color: #0b1324;
+  color: var(--text);
   margin-bottom: 3px;
   margin-top: 2px;
 }
@@ -276,23 +295,23 @@
 .register-form input[type="password"] {
   width: 100%;
   height: 52px;
-  border: 1px solid #d9e2ec;
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0 16px;
   font-size: 15px;
   outline: none;
-  background: #ffffff;
-  color: #0b1324;
+  background: var(--input-bg);
+  color: var(--input-text);
   box-shadow: none;
 }
 
 .register-form input::placeholder {
-  color: #64748b;
+  color: var(--input-placeholder);
 }
 
 .register-form input:focus {
-  border-color: #0a66c2;
-  box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.12);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-ring);
 }
 
 .terms-row {
@@ -311,12 +330,12 @@
 
 .terms-row p {
   font-size: 12px;
-  color: #4b5563;
+  color: var(--muted);
   line-height: 1.45;
 }
 
 .terms-row span {
-  color: #0b72d9;
+  color: var(--primary);
   cursor: pointer;
 }
 
@@ -325,8 +344,8 @@
   height: 50px;
   border: none;
   border-radius: 14px;
-  background: #0b72d9;
-  color: #fff;
+  background: var(--lc-grad-primary);
+  color: var(--lc-on-primary);
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
@@ -338,7 +357,7 @@
 }
 
 .create-account-btn:hover:not(:disabled) {
-  background: #0960c7;
+  background: var(--primary-dark);
   box-shadow: 0 10px 24px rgba(11, 114, 217, 0.28);
 }
 
@@ -349,7 +368,7 @@
 .signin-text {
   text-align: center;
   font-size: 14px;
-  color: #4b5563;
+  color: var(--muted);
   margin-top: 12px;
   margin-bottom: 4px;
 }
@@ -360,7 +379,7 @@
   padding: 0;
   margin: 0;
   font: inherit;
-  color: #0b72d9;
+  color: var(--primary);
   font-weight: 700;
   cursor: pointer;
   text-decoration: underline;
@@ -368,7 +387,7 @@
 }
 
 .signin-text-link:hover {
-  color: #0960c7;
+  color: var(--primary-dark);
 }
 
 @media (max-width: 992px) {
@@ -405,4 +424,105 @@
   .features-list {
     overflow: visible;
   }
+}
+
+/* Password strength (candidate + company register) */
+.password-strength {
+  margin-top: 6px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.password-strength-head {
+  margin-bottom: 6px;
+}
+
+.password-strength-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--pw-strength-accent, var(--muted));
+}
+
+.password-strength-bar {
+  height: 6px;
+  border-radius: var(--lc-radius-pill, 999px);
+  background: var(--border);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.password-strength-fill {
+  height: 100%;
+  max-width: 100%;
+  border-radius: inherit;
+  background: var(--pw-strength-accent, var(--muted));
+  transition:
+    width 0.2s ease,
+    background 0.2s ease;
+}
+
+.password-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.password-check-item {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding-left: 18px;
+  position: relative;
+  line-height: 1.35;
+}
+
+.password-check-item::before {
+  content: "○";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.password-check-item.valid {
+  color: var(--text-secondary);
+}
+
+.password-check-item.valid::before {
+  content: "✓";
+  color: var(--success);
+  opacity: 1;
+  font-weight: 800;
+}
+
+/* Avoid autofill flashing a white slab over themed register fields */
+.register-form input[type="text"]:-webkit-autofill,
+.register-form input[type="email"]:-webkit-autofill,
+.register-form input[type="password"]:-webkit-autofill {
+  transition: background-color 99999s ease-out !important;
+}
+
+html.theme-dark .company-register-page .register-form input:-webkit-autofill,
+html.theme-dark .register-page .register-form input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+  box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+  -webkit-text-fill-color: var(--input-text) !important;
+  caret-color: var(--input-text);
+}
+
+html.theme-light .company-register-page .register-form input:-webkit-autofill,
+html.theme-light .register-page .register-form input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--card) inset !important;
+  box-shadow: 0 0 0 1000px var(--card) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text);
 }
